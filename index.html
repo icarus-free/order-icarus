@@ -1,0 +1,385 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>聚会点菜（Firebase 实时）</title>
+  <style>
+    :root {
+      --bg: #f5f2ec;
+      --panel: #fffaf2;
+      --ink: #1f1a16;
+      --muted: #7b6f62;
+      --gold: #9b7d4b;
+      --line: #e7dccd;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", serif; background: radial-gradient(circle at 10% 10%, #fffaf4 0%, var(--bg) 60%); color: var(--ink); }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 14px; box-shadow: 0 8px 24px rgba(64, 40, 18, 0.07); }
+    h1 { margin: 4px 0 10px; font-size: 24px; }
+    h2 { margin: 4px 0 10px; font-size: 18px; color: var(--gold); }
+    h3 { margin: 8px 0; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    input, textarea, select, button { border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; background: #fff; }
+    input, textarea, select { width: 100%; }
+    button { background: var(--ink); color: #fff; cursor: pointer; }
+    button.alt { background: #fff; color: var(--ink); }
+    .pill { padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 12px; }
+    .dish { border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 10px; background: #fffefb; }
+    .dish img { width: 100%; height: 150px; object-fit: cover; border-radius: 10px; margin: 8px 0; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .hide { display: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>朋友聚会点菜</h1>
+      <div class="row">
+        <span class="pill" id="roleTag">成员模式</span>
+        <span class="pill" id="syncTag">未连接云端</span>
+        <button class="alt" id="shareBtn">复制成员链接</button>
+        <button class="alt" id="shareAdminBtn">复制管理员链接</button>
+        <button class="alt" id="pdfBtn">导出汇总 PDF</button>
+      </div>
+    </div>
+
+    <div class="card hide" id="cloudPanel">
+      <h2>云端配置（管理员）</h2>
+      <div class="row"><input id="fbApiKey" placeholder="Firebase apiKey" /></div>
+      <div class="row"><input id="fbAuthDomain" placeholder="Firebase authDomain" /></div>
+      <div class="row"><input id="fbProjectId" placeholder="Firebase projectId" /></div>
+      <div class="row"><input id="fbAppId" placeholder="Firebase appId" /></div>
+      <div class="row"><button id="connectBtn">连接实时同步</button></div>
+      <div id="connectStatus" class="muted">管理员填 Firebase 参数并连接。</div>
+    </div>
+
+    <div class="card" id="memberCard">
+      <h2>参与人</h2>
+      <div class="row">
+        <input id="memberName" placeholder="输入你的昵称，如：小王（可选）" />
+        <button id="saveMember">进入点菜</button>
+        <button class="alt" id="submitOrderBtn">提交点菜</button>
+      </div>
+      <div class="muted" id="memberStatus">可直接点菜；不填昵称会自动分配访客名。</div>
+    </div>
+
+    <div class="card" id="searchCard">
+      <h2>搜索菜品</h2>
+      <input id="search" placeholder="输入菜名模糊搜索" />
+    </div>
+
+    <div class="card hide" id="adminPanel">
+      <h2>管理员：新增菜品</h2>
+      <div class="row"><input id="dishName" placeholder="菜名" /></div>
+      <div class="row"><select id="dishCat"><option>肉类</option><option>海鲜</option><option>蔬菜</option><option>主食</option><option>点心</option></select></div>
+      <div class="row"><textarea id="dishNote" rows="2" placeholder="菜品固定备注（可选）"></textarea></div>
+      <div class="row"><input id="dishImg" type="file" accept="image/*" /></div>
+      <button id="addDish">添加菜品</button>
+    </div>
+
+    <div class="card" id="dishCard">
+      <h2>菜品列表</h2>
+      <div id="dishList"></div>
+    </div>
+
+    <div class="card">
+      <h2>管理员统计视图</h2>
+      <div id="summary" class="muted">仅管理员可看明细与统计。</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    const categories = ["肉类", "海鲜", "蔬菜", "主食", "点心"];
+    const params = new URLSearchParams(location.search);
+    const ADMIN_KEY = "chef-admin";
+    const isAdmin = params.get("admin") === "1" && params.get("key") === ADMIN_KEY;
+
+    function makeId() { return `id-${Date.now()}-${Math.floor(Math.random() * 1e9)}`; }
+    function buildDishImage(name) {
+      const safe = String(name || "").replace(/[<>&'\"]/g, "");
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f8efe1"/><stop offset="100%" stop-color="#e8d7bf"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="72" fill="#7c623d" font-family="serif">${safe}</text></svg>`;
+      return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+
+    const seed = [
+      { id: makeId(), name: "可乐鸡翅", cat: "肉类", note: "", img: "" },
+      { id: makeId(), name: "清炒空心菜", cat: "蔬菜", note: "", img: "" },
+      { id: makeId(), name: "小炒黄牛肉", cat: "肉类", note: "", img: "" },
+      { id: makeId(), name: "椒盐虾", cat: "海鲜", note: "", img: "" },
+      { id: makeId(), name: "椒麻口水鸡", cat: "肉类", note: "", img: "" },
+      { id: makeId(), name: "糖醋排骨", cat: "肉类", note: "", img: "" },
+      { id: makeId(), name: "回锅肉", cat: "肉类", note: "", img: "" },
+      { id: makeId(), name: "番茄炒蛋", cat: "蔬菜", note: "", img: "" },
+      { id: makeId(), name: "炖排骨", cat: "肉类", note: "", img: "" },
+      { id: makeId(), name: "香干炒肉", cat: "肉类", note: "", img: "" },
+      { id: makeId(), name: "秘制火鸡面", cat: "主食", note: "", img: "" }
+    ];
+
+    const roleTag = document.getElementById("roleTag");
+    const syncTag = document.getElementById("syncTag");
+    const cloudPanel = document.getElementById("cloudPanel");
+    const adminPanel = document.getElementById("adminPanel");
+    const memberCard = document.getElementById("memberCard");
+    const searchCard = document.getElementById("searchCard");
+    const dishCard = document.getElementById("dishCard");
+    const memberInput = document.getElementById("memberName");
+    const memberStatus = document.getElementById("memberStatus");
+    const connectStatus = document.getElementById("connectStatus");
+
+    if (isAdmin) {
+      roleTag.textContent = "管理员模式";
+      adminPanel.classList.remove("hide");
+      cloudPanel.classList.remove("hide");
+      memberCard.classList.add("hide");
+      searchCard.classList.add("hide");
+      dishCard.classList.add("hide");
+    }
+
+    let member = localStorage.getItem("member-name") || "";
+    memberInput.value = member;
+    memberStatus.textContent = member ? `当前昵称：${member}` : "未设置昵称（可直接点菜）";
+
+    let db = null;
+    let roomRef = null;
+    let roomState = { dishes: seed, orders: {} };
+
+    function safeState(raw) {
+      if (!raw || typeof raw !== "object") return { dishes: seed, orders: {} };
+      return {
+        dishes: Array.isArray(raw.dishes) ? raw.dishes : seed,
+        orders: raw.orders && typeof raw.orders === "object" ? raw.orders : {}
+      };
+    }
+
+    const defaultCfg = {
+      apiKey: "AIzaSyAgd4dHKM0Kh3B7RyzBmP77swBOXNnQdGo",
+      authDomain: "order-459ca.firebaseapp.com",
+      projectId: "order-459ca",
+      appId: "1:36543886310:web:f8cbc1038e4c774ee79c27"
+    };
+    const cfg = {
+      apiKey: params.get("apiKey") || localStorage.getItem("fb-apiKey") || defaultCfg.apiKey,
+      authDomain: params.get("authDomain") || localStorage.getItem("fb-authDomain") || defaultCfg.authDomain,
+      projectId: params.get("projectId") || localStorage.getItem("fb-projectId") || defaultCfg.projectId,
+      appId: params.get("appId") || localStorage.getItem("fb-appId") || defaultCfg.appId
+    };
+
+    document.getElementById("fbApiKey").value = cfg.apiKey;
+    document.getElementById("fbAuthDomain").value = cfg.authDomain;
+    document.getElementById("fbProjectId").value = cfg.projectId;
+    document.getElementById("fbAppId").value = cfg.appId;
+
+    async function connectFirebase() {
+      const apiKey = document.getElementById("fbApiKey").value.trim();
+      const authDomain = document.getElementById("fbAuthDomain").value.trim();
+      const projectId = document.getElementById("fbProjectId").value.trim();
+      const appId = document.getElementById("fbAppId").value.trim();
+      if (!apiKey || !authDomain || !projectId || !appId) {
+        alert("请填写完整 Firebase 参数");
+        return;
+      }
+      localStorage.setItem("fb-apiKey", apiKey);
+      localStorage.setItem("fb-authDomain", authDomain);
+      localStorage.setItem("fb-projectId", projectId);
+      localStorage.setItem("fb-appId", appId);
+
+      connectStatus.textContent = "连接中...";
+      const app = initializeApp({ apiKey, authDomain, projectId, appId });
+      db = getFirestore(app);
+      roomRef = doc(db, "menu_rooms", "main");
+
+      const snap = await getDoc(roomRef);
+      if (!snap.exists()) {
+        await setDoc(roomRef, { state: roomState, updatedAt: serverTimestamp() });
+      } else {
+        roomState = safeState(snap.data().state);
+      }
+
+      onSnapshot(roomRef, (s) => {
+        if (!s.exists()) return;
+        roomState = safeState(s.data().state);
+        render();
+      });
+
+      syncTag.textContent = "实时中";
+      connectStatus.textContent = "已连接 Firebase 实时同步";
+      render();
+    }
+
+    async function pushState() {
+      if (!roomRef) return;
+      await setDoc(roomRef, { state: roomState, updatedAt: serverTimestamp() }, { merge: true });
+    }
+
+    document.getElementById("connectBtn").onclick = connectFirebase;
+
+    document.getElementById("saveMember").onclick = () => {
+      member = memberInput.value.trim();
+      if (!member) { member = `访客${Math.floor(1000 + Math.random() * 9000)}`; memberInput.value = member; }
+      localStorage.setItem("member-name", member);
+      if (!roomState.orders[member]) roomState.orders[member] = { picks: {}, notes: {} };
+      pushState();
+      memberStatus.textContent = `当前昵称：${member}`;
+      alert(`已进入：${member}`);
+      render();
+    };
+
+    document.getElementById("submitOrderBtn").onclick = async () => {
+      ensureMember();
+      roomState.orders[member].submittedAt = new Date().toISOString();
+      await pushState();
+      alert("已提交点菜");
+    };
+
+    document.getElementById("search").addEventListener("input", render);
+
+    document.getElementById("dishImg").addEventListener("change", async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      document.getElementById("dishImg").dataset.base64 = await fileToDataURL(f);
+    });
+
+    document.getElementById("addDish").onclick = async () => {
+      const name = document.getElementById("dishName").value.trim();
+      const cat = document.getElementById("dishCat").value;
+      const note = document.getElementById("dishNote").value.trim();
+      const img = document.getElementById("dishImg").dataset.base64 || "";
+      if (!name) return alert("请输入菜名");
+      roomState.dishes.unshift({ id: makeId(), name, cat, note, img });
+      await pushState();
+      ["dishName", "dishNote"].forEach(id => document.getElementById(id).value = "");
+      const imgInput = document.getElementById("dishImg");
+      imgInput.value = "";
+      imgInput.dataset.base64 = "";
+      render();
+    };
+
+    document.getElementById("shareBtn").onclick = async () => {
+      const base = `${location.origin}${location.pathname}`;
+      const q = new URLSearchParams({ apiKey: cfg.apiKey || localStorage.getItem("fb-apiKey") || "", authDomain: cfg.authDomain || localStorage.getItem("fb-authDomain") || "", projectId: cfg.projectId || localStorage.getItem("fb-projectId") || "", appId: cfg.appId || localStorage.getItem("fb-appId") || "" });
+      await navigator.clipboard.writeText(`${base}?${q.toString()}`);
+      alert("成员链接已复制");
+    };
+
+    document.getElementById("shareAdminBtn").onclick = async () => {
+      const base = `${location.origin}${location.pathname}`;
+      const q = new URLSearchParams({ admin: "1", key: ADMIN_KEY, apiKey: cfg.apiKey || localStorage.getItem("fb-apiKey") || "", authDomain: cfg.authDomain || localStorage.getItem("fb-authDomain") || "", projectId: cfg.projectId || localStorage.getItem("fb-projectId") || "", appId: cfg.appId || localStorage.getItem("fb-appId") || "" });
+      await navigator.clipboard.writeText(`${base}?${q.toString()}`);
+      alert("管理员链接已复制");
+    };
+
+    document.getElementById("pdfBtn").onclick = () => {
+      if (!isAdmin) return alert("仅管理员可导出");
+      const win = window.open("", "_blank");
+      win.document.write(buildSummaryHtml());
+      win.document.close();
+      win.focus();
+      win.print();
+    };
+
+    function ensureMember() {
+      if (!member) {
+        member = `访客${Math.floor(1000 + Math.random() * 9000)}`;
+        memberInput.value = member;
+        localStorage.setItem("member-name", member);
+        memberStatus.textContent = `当前昵称：${member}`;
+      }
+      if (!roomState.orders[member]) roomState.orders[member] = { picks: {}, notes: {} };
+    }
+
+    async function togglePick(dishId, checked) {
+      ensureMember();
+      roomState.orders[member].picks[dishId] = checked;
+      await pushState();
+    }
+
+    async function saveTempNote(dishId, value) {
+      ensureMember();
+      roomState.orders[member].notes[dishId] = value;
+      await pushState();
+    }
+
+    function render() {
+      const box = document.getElementById("dishList");
+      const kw = document.getElementById("search").value.trim();
+      const dishes = roomState.dishes || [];
+      const mine = (roomState.orders[member] && roomState.orders[member].picks) || {};
+      const myNotes = (roomState.orders[member] && roomState.orders[member].notes) || {};
+      box.innerHTML = "";
+
+      categories.forEach(cat => {
+        const list = dishes.filter(d => d.cat === cat && d.name.includes(kw));
+        if (!list.length) return;
+        const title = document.createElement("h3");
+        title.textContent = cat;
+        box.appendChild(title);
+        list.forEach(d => {
+          const el = document.createElement("div");
+          const imgSrc = d.img || buildDishImage(d.name);
+          el.className = "dish";
+          el.innerHTML = `<div class="row"><strong>${d.name}</strong></div><img src="${imgSrc}" alt="${d.name}">${d.note ? `<div class="muted">固定备注：${d.note}</div>` : ""}<div class="row"><label><input type="checkbox" ${mine[d.id] ? "checked" : ""}/> 我想点这个</label></div><div class="row"><input placeholder="本次备注（可选）" value="${myNotes[d.id] || ""}" /></div>`;
+          el.querySelector("input[type=checkbox]").onchange = (e) => togglePick(d.id, e.target.checked);
+          el.querySelector("input[placeholder]").onchange = (e) => saveTempNote(d.id, e.target.value.trim());
+          box.appendChild(el);
+        });
+      });
+      renderSummary();
+    }
+
+    function renderSummary() {
+      const box = document.getElementById("summary");
+      if (!isAdmin) { box.textContent = "仅管理员可看明细与统计。"; return; }
+      const dishes = roomState.dishes || [];
+      const count = {};
+      let html = "<div>";
+      Object.entries(roomState.orders || {}).forEach(([name, data]) => {
+        html += `<div><strong>${name}</strong>：`;
+        const picks = Object.entries(data.picks || {}).filter(([,v]) => v);
+        html += picks.map(([id]) => { const d = dishes.find(x => x.id === id); return d ? d.name : ""; }).filter(Boolean).join("、") || "未点";
+        html += "</div>";
+        picks.forEach(([id]) => count[id] = (count[id] || 0) + 1);
+      });
+      html += "<hr><strong>总计：</strong><br/>";
+      Object.entries(count).forEach(([id, n]) => {
+        const d = dishes.find(x => x.id === id);
+        if (d) html += `${d.name} x ${n}<br/>`;
+      });
+      html += "</div>";
+      box.innerHTML = html;
+    }
+
+    function buildSummaryHtml() {
+      const dishes = roomState.dishes || [];
+      const count = {};
+      Object.values(roomState.orders || {}).forEach(data => Object.entries(data.picks || {}).forEach(([id, v]) => { if (v) count[id] = (count[id] || 0) + 1; }));
+      let rows = "";
+      Object.entries(count).forEach(([id, n]) => {
+        const d = dishes.find(x => x.id === id);
+        if (d) rows += `<tr><td>${d.name}</td><td>${d.cat}</td><td>${n}</td><td>${d.note || ""}</td></tr>`;
+      });
+      return `<!doctype html><html><head><meta charset="UTF-8"><title>点菜单汇总</title></head><body><h1>点菜单汇总</h1><table border="1" cellspacing="0" cellpadding="8"><tr><th>菜名</th><th>分类</th><th>数量</th><th>固定备注</th></tr>${rows}</table></body></html>`;
+    }
+
+    function fileToDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (cfg.apiKey && cfg.authDomain && cfg.projectId && cfg.appId) {
+      connectFirebase();
+    } else {
+      syncTag.textContent = "本地模式";
+      render();
+    }
+  </script>
+</body>
+</html>
