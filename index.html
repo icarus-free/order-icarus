@@ -700,23 +700,37 @@
       }
     }
 
-    async function migrateInlineDishImages() {
+    function inlineImageStats() {
+      return {
+        dishes: (roomState.dishes || []).filter((d) => isDataUrl(d.img)),
+        album: (roomState.album || []).filter((item) => isDataUrl(item.img))
+      };
+    }
+
+    async function migrateInlineImages({ save = true } = {}) {
       if (!isAdmin || !storage) return;
-      const inlineImages = (roomState.dishes || []).filter((d) => isDataUrl(d.img));
-      if (!inlineImages.length) return;
-      connectStatus.textContent = `正在迁移 ${inlineImages.length} 张旧图片到 Storage...`;
+      const inline = inlineImageStats();
+      const total = inline.dishes.length + inline.album.length;
+      if (!total) return;
+      connectStatus.textContent = `正在迁移 ${total} 张旧图片到 Storage...`;
       try {
-        for (const dish of inlineImages) {
+        for (const dish of inline.dishes) {
           dish.img = await uploadDishImage(dish.id, dish.img);
+        }
+        for (const item of inline.album) {
+          item.img = await uploadAlbumImage(item.id, item.img);
         }
       } catch (e) {
         connectStatus.textContent = `旧图片迁移失败：${e && e.message ? e.message : "Storage 上传失败"}`;
-        return;
+        lastPushError = e && e.message ? e.message : "Storage 上传失败";
+        return false;
       }
+      if (!save) return true;
       const ok = await pushState();
       connectStatus.textContent = ok
         ? "旧图片已迁移到 Storage 文件夹"
         : `旧图片迁移失败：${pushFailureText()}`;
+      return ok;
     }
 
     let member = getStore("member-name") || "";
@@ -726,6 +740,7 @@
     let roomRef = null;
     let storage = null;
     let lastPushError = "";
+    let inlineMigrationInProgress = false;
     let roomState = {
       dishes: seed,
       orders: {},
@@ -896,7 +911,7 @@
         roomState = safeState(snap.data().state);
       }
       syncAdminAccess();
-      await migrateInlineDishImages();
+      await migrateInlineImages();
 
       onSnapshot(roomRef, (s) => {
         if (!s.exists()) return;
@@ -915,6 +930,13 @@
     async function pushState() {
       lastPushError = "";
       if (!roomRef) return false;
+      const inline = inlineImageStats();
+      if (!inlineMigrationInProgress && storage && (inline.dishes.length || inline.album.length)) {
+        inlineMigrationInProgress = true;
+        const migrated = await migrateInlineImages({ save: false });
+        inlineMigrationInProgress = false;
+        if (migrated === false) return false;
+      }
       const payloadBytes = statePayloadBytes(roomState);
       if (payloadBytes > FIRESTORE_SAFE_PAYLOAD_BYTES) {
         lastPushError = `保存内容约 ${formatBytes(payloadBytes)}，已接近 Firestore 单文档上限；请减少图片数量或换更小图片`;
