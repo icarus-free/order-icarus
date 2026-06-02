@@ -6,52 +6,135 @@
   <title>聚会点菜（Firebase 实时）</title>
   <style>
     :root {
-      --bg: #f5f2ec;
-      --panel: #fffaf2;
-      --ink: #1f1a16;
-      --muted: #7b6f62;
-      --gold: #9b7d4b;
-      --line: #e7dccd;
-      --dark: #241d16;
+      --bg: #f7f4f0;
+      --surface: #ffffff;
+      --surface-2: #f3eee8;
+      --ink: #2a2523;
+      --muted: #7b706b;
+      --accent: #6f4437;
+      --accent-2: #b77762;
+      --line: #e5d9d0;
+      --danger: #a84035;
+      --rose: #c98b85;
+      --night: #211817;
+      --shadow: 0 10px 28px rgba(66, 43, 35, 0.09);
     }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", serif; background: radial-gradient(circle at 10% 10%, #fffaf4 0%, var(--bg) 60%); color: var(--ink); }
-    .wrap { max-width: 900px; margin: 0 auto; padding: 16px 16px 100px; }
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 14px; box-shadow: 0 8px 24px rgba(64, 40, 18, 0.07); }
-    h1 { margin: 4px 0 10px; font-size: 24px; }
-    h2 { margin: 4px 0 10px; font-size: 18px; color: var(--gold); }
-    h3 { margin: 8px 0; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(180deg, #f0e3dc 0%, var(--bg) 260px);
+      color: var(--ink);
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 18px 14px 104px; }
+    .card {
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .wrap > .card:first-of-type {
+      position: sticky;
+      top: 0;
+      z-index: 18;
+      border-radius: 0 0 8px 8px;
+      border-top: 0;
+      backdrop-filter: blur(14px);
+    }
+    h1 { margin: 0 0 10px; font-size: clamp(22px, 4vw, 32px); line-height: 1.15; font-weight: 800; letter-spacing: 0; }
+    h2 { margin: 0 0 12px; font-size: 16px; color: var(--accent); font-weight: 800; }
+    h3 {
+      margin: 18px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--line);
+      color: #354039;
+      font-size: 15px;
+    }
     .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    input, textarea, select, button { border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; background: #fff; }
-    input, textarea, select { width: 100%; }
-    button { background: var(--ink); color: #fff; cursor: pointer; }
-    button.alt { background: #fff; color: var(--ink); }
-    button.warn { background: #8a2f2f; }
-    .pill { padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 12px; }
-    .dish { border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 10px; background: #fffefb; }
-    .dish img { width: 100%; height: 150px; object-fit: cover; border-radius: 10px; margin: 8px 0; }
-    .muted { color: var(--muted); font-size: 13px; }
+    input, textarea, select, button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px 12px;
+      font: inherit;
+      background: #fff;
+    }
+    input, textarea, select { width: 100%; color: var(--ink); }
+    input:focus, textarea:focus, select:focus {
+      outline: 2px solid rgba(111, 68, 55, 0.2);
+      border-color: var(--accent);
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      border-color: var(--accent);
+      font-weight: 750;
+      min-height: 42px;
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    button.alt { background: #fff; color: var(--accent); border-color: #d8beb4; }
+    button.warn { background: var(--danger); border-color: var(--danger); }
+    label { color: var(--muted); }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .dish {
+      display: grid;
+      grid-template-columns: 132px minmax(0, 1fr);
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: var(--surface);
+    }
+    .dish img {
+      grid-row: span 4;
+      width: 132px;
+      height: 108px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin: 0;
+      background: var(--surface-2);
+    }
+    .dish .row { align-items: flex-start; }
+    .dish strong { font-size: 17px; line-height: 1.25; }
+    .dish input[type="checkbox"] { width: auto; }
+    .muted { color: var(--muted); font-size: 13px; line-height: 1.5; }
     .hide { display: none; }
 
     .category-rail {
       position: fixed;
-      left: 6px;
+      left: 8px;
       top: 50%;
       transform: translateY(-50%);
-      width: 68px;
+      width: 64px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 7px;
       z-index: 20;
       touch-action: none;
     }
     .category-btn {
-      background: rgba(255, 250, 242, 0.95);
-      color: var(--ink);
-      border: 1px solid var(--line);
-      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--accent);
+      border: 1px solid #dcc9c0;
+      border-radius: 8px;
       font-size: 12px;
       padding: 8px 4px;
+      box-shadow: 0 4px 14px rgba(37, 50, 43, 0.08);
     }
 
     .bottom-bar {
@@ -60,48 +143,237 @@
       right: 0;
       bottom: 0;
       z-index: 25;
-      background: rgba(36, 29, 22, 0.96);
-      padding: 10px 12px env(safe-area-inset-bottom);
+      background: rgba(34, 37, 34, 0.94);
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
       display: flex;
       gap: 10px;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.18);
     }
     .bottom-bar button {
       flex: 1;
-      background: #f3e5ce;
-      color: #2c2218;
+      background: #f6e6df;
+      color: #69392f;
       border: 0;
-      font-weight: 700;
+      font-weight: 800;
     }
 
     .picked-panel {
       position: fixed;
       left: 0;
       right: 0;
-      bottom: 64px;
+      bottom: 66px;
       max-height: 45vh;
       overflow: auto;
-      background: var(--panel);
+      background: var(--surface);
       border-top: 1px solid var(--line);
-      padding: 12px;
+      padding: 14px;
       z-index: 24;
+      box-shadow: 0 -10px 28px rgba(37, 50, 43, 0.12);
     }
 
-    .admin-dish-actions { display: flex; gap: 8px; }
+    .admin-dish-actions { display: flex; gap: 8px; grid-column: 2; }
     .admin-dish-actions button { flex: 1; }
+    .mode-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .mode-toggle label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      font-weight: 750;
+    }
+    .mode-toggle input { width: auto; }
+    .celebration-note {
+      border-color: rgba(201, 139, 133, 0.45);
+      background: linear-gradient(135deg, #fff8f5, #f4e6df);
+    }
+    .celebration-card {
+      position: relative;
+      overflow: hidden;
+      color: #f8eee9;
+      background:
+        linear-gradient(135deg, rgba(33, 24, 23, 0.88), rgba(94, 53, 45, 0.82)),
+        linear-gradient(180deg, #4c312c, #211817);
+      border-color: rgba(255, 226, 212, 0.26);
+    }
+    .celebration-card h2 { color: #ffe0d2; }
+    .celebration-card .muted { color: #ead2c8; }
+    .album-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+    }
+    .album-tile {
+      position: relative;
+      min-height: 220px;
+      border: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      padding: 0;
+      background: var(--night);
+      color: #fff;
+      text-align: left;
+      box-shadow: 0 14px 34px rgba(47, 31, 28, 0.18);
+    }
+    .album-tile img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      display: block;
+      filter: saturate(0.92) contrast(1.04);
+    }
+    .album-tile .album-caption {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 42px 12px 12px;
+      background: linear-gradient(180deg, rgba(0,0,0,0), rgba(25,16,15,0.88));
+    }
+    .album-tile strong { display: block; font-size: 16px; line-height: 1.25; }
+    .album-tile span { display: block; margin-top: 4px; color: #f4d2c5; font-size: 12px; }
+    .album-admin-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .album-admin-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .album-admin-item img { width: 100%; height: 140px; object-fit: cover; display: block; }
+    .album-admin-body { padding: 10px; }
+    .album-admin-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .album-admin-actions button { flex: 1; }
+    .blessing-bar {
+      margin-top: 10px;
+      padding: 12px;
+      border: 1px solid rgba(255, 224, 210, 0.38);
+      border-radius: 8px;
+      background: rgba(255, 244, 238, 0.12);
+      color: #ffe4d8;
+      line-height: 1.6;
+    }
     .admin-collapse { margin-top: 16px; }
-    .admin-collapse summary { cursor: pointer; color: var(--gold); font-weight: 700; }
+    .admin-collapse summary { cursor: pointer; color: var(--accent); font-weight: 800; }
     .modal-mask {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      position: fixed; inset: 0; background: rgba(18, 24, 20, 0.52);
       display: flex; align-items: center; justify-content: center; z-index: 40;
+      padding: 14px;
     }
     .modal-mask.hide { display: none; }
     .modal {
-      width: min(92vw, 520px); background: var(--panel); border: 1px solid var(--line);
-      border-radius: 14px; padding: 14px;
+      width: min(92vw, 520px);
+      max-height: 92vh;
+      overflow: auto;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.24);
+    }
+    .birthday-mask {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(255, 220, 202, 0.28), transparent 32%),
+        radial-gradient(circle at 80% 78%, rgba(201, 139, 133, 0.22), transparent 34%),
+        linear-gradient(135deg, #180f10, #4c2c2a 55%, #221516);
+      color: #fff1e9;
+      animation: birthdayFade 5.2s ease forwards;
+    }
+    .birthday-mask.hide { display: none; }
+    .birthday-scene {
+      width: min(720px, 92vw);
+      text-align: center;
+      padding: 28px;
+      border: 1px solid rgba(255, 230, 218, 0.22);
+      border-radius: 10px;
+      background: rgba(31, 20, 19, 0.46);
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.36);
+      animation: birthdayRise 1.1s ease both;
+    }
+    .birthday-scene h2 {
+      margin: 0 0 12px;
+      color: #ffe0d2;
+      font-size: clamp(28px, 8vw, 58px);
+      letter-spacing: 0;
+    }
+    .birthday-scene p { margin: 0 auto; max-width: 560px; line-height: 1.8; color: #f9d8cc; }
+    .birthday-lights {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .birthday-lights span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ffd7c5;
+      box-shadow: 0 0 18px #ffd7c5;
+      animation: lightPulse 1.2s ease-in-out infinite alternate;
+    }
+    .birthday-lights span:nth-child(2) { animation-delay: 0.18s; background: #f0a99a; }
+    .birthday-lights span:nth-child(3) { animation-delay: 0.36s; }
+    .birthday-lights span:nth-child(4) { animation-delay: 0.54s; background: #f0a99a; }
+    .album-detail img {
+      width: 100%;
+      max-height: 58vh;
+      object-fit: cover;
+      border-radius: 8px;
+      display: block;
+      background: var(--surface-2);
+    }
+    .album-detail p { line-height: 1.8; white-space: pre-wrap; }
+    @keyframes birthdayRise {
+      from { opacity: 0; transform: translateY(18px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes birthdayFade {
+      0%, 82% { opacity: 1; }
+      100% { opacity: 0; visibility: hidden; }
+    }
+    @keyframes lightPulse {
+      from { transform: translateY(0); opacity: 0.55; }
+      to { transform: translateY(-7px); opacity: 1; }
     }
 
-    @media (min-width: 900px) {
-      .category-rail { left: calc(50% - 530px); }
+    @media (max-width: 720px) {
+      .wrap { padding-left: 84px; }
+      .dish { grid-template-columns: 104px minmax(0, 1fr); }
+      .dish img { width: 104px; height: 96px; }
+      .admin-dish-actions { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 460px) {
+      .wrap { padding-left: 76px; padding-right: 10px; }
+      .card { padding: 12px; }
+      .dish { grid-template-columns: 1fr; }
+      .dish img { grid-row: auto; width: 100%; height: 152px; }
+      .admin-dish-actions { grid-column: 1; }
+      .category-rail { width: 58px; }
+      .mode-toggle { grid-template-columns: 1fr; }
+    }
+
+    @media (min-width: 1000px) {
+      .category-rail { left: calc(50% - 570px); }
     }
   </style>
 </head>
@@ -110,7 +382,7 @@
 
   <div class="wrap">
     <div class="card">
-      <h1>朋友聚会点菜</h1>
+      <h1>CB和熙熙的厨房</h1>
       <div class="row">
         <span class="pill" id="roleTag">成员模式</span>
         <span class="pill" id="syncTag">未连接云端</span>
@@ -126,10 +398,18 @@
       <div class="row"><input id="fbApiKey" placeholder="Firebase apiKey" /></div>
       <div class="row"><input id="fbAuthDomain" placeholder="Firebase authDomain" /></div>
       <div class="row"><input id="fbProjectId" placeholder="Firebase projectId" /></div>
+      <div class="row"><input id="fbStorageBucket" placeholder="Firebase storageBucket（用于菜品图片）" /></div>
       <div class="row"><input id="fbAppId" placeholder="Firebase appId" /></div>
       <div class="row"><input id="adminSecretInput" placeholder="管理员口令（自定义）" /></div>
       <div class="row"><button class="alt" id="saveAdminSecretBtn">保存管理员口令</button></div>
       <div class="row"><label><input type="checkbox" id="allowSubmitToggle" checked /> 允许成员提交点菜</label></div>
+      <h2 style="margin-top:18px;">生日模式</h2>
+      <div class="mode-toggle">
+        <label><input type="radio" name="appMode" value="normal" checked /> 一般模式</label>
+        <label><input type="radio" name="appMode" value="celebration" /> 庆祝模式</label>
+      </div>
+      <div class="row"><textarea id="birthdayMessageInput" rows="3" placeholder="写给熙熙的生日文案"></textarea></div>
+      <div class="row"><button class="alt" id="saveCelebrationBtn">保存生日设置</button></div>
       <div class="row"><button id="connectBtn">连接实时同步</button></div>
       <div id="connectStatus" class="muted">管理员填 Firebase 参数并连接。</div>
     </div>
@@ -148,12 +428,26 @@
       <input id="search" placeholder="输入菜名模糊搜索" />
     </div>
 
+    <div class="card celebration-card hide" id="celebrationPanel">
+      <h2>给熙熙的一点厨房电影</h2>
+      <div id="birthdayInline" class="blessing-bar hide"></div>
+      <div class="row">
+        <button class="alt" id="albumJumpBtn">打开料理相册</button>
+      </div>
+    </div>
+
+    <div class="card hide" id="albumPanel">
+      <h2>料理相册</h2>
+      <div id="albumGrid" class="album-grid"></div>
+    </div>
+
     <div class="card hide" id="adminPanel">
       <h2>管理员：新增菜品</h2>
       <div class="row"><input id="dishName" placeholder="菜名" /></div>
       <div class="row"><select id="dishCat"><option>肉类</option><option>海鲜</option><option>蔬菜</option><option>主食</option><option>点心</option></select></div>
       <div class="row"><textarea id="dishNote" rows="2" placeholder="菜品备注（可选）"></textarea></div>
       <div class="row"><input id="dishImg" type="file" accept="image/*" /></div>
+      <div id="dishImgStatus" class="muted"></div>
       <button id="addDish">添加菜品</button>
 
       <details class="admin-collapse">
@@ -162,6 +456,20 @@
           <button class="warn" id="resetOrdersBtn">重置全部点菜清单</button>
         </div>
         <div id="adminDishList" style="margin-top:10px;"></div>
+      </details>
+
+      <details class="admin-collapse" open>
+        <summary>管理员：料理相册</summary>
+        <div class="row" style="margin-top:10px;"><input id="albumTitle" placeholder="这一顿饭的标题" /></div>
+        <div class="row"><input id="albumDate" type="date" /></div>
+        <div class="row"><textarea id="albumText" rows="3" placeholder="记录一点关于这顿饭的故事"></textarea></div>
+        <div class="row"><input id="albumImg" type="file" accept="image/*" /></div>
+        <div id="albumImgStatus" class="muted"></div>
+        <div class="row">
+          <button id="saveAlbumBtn">添加相册记录</button>
+          <button class="alt hide" id="cancelAlbumEditBtn">取消编辑</button>
+        </div>
+        <div id="adminAlbumList" class="album-admin-list"></div>
       </details>
     </div>
 
@@ -181,6 +489,13 @@
     <button id="submitOrderBtn">提交点菜</button>
   </div>
   <div class="picked-panel hide" id="pickedPanel"></div>
+  <div class="birthday-mask hide" id="birthdayMask">
+    <div class="birthday-scene">
+      <div class="birthday-lights"><span></span><span></span><span></span><span></span></div>
+      <h2>生日快乐，熙熙</h2>
+      <p id="birthdayOverlayText"></p>
+    </div>
+  </div>
   <div class="modal-mask hide" id="editModalMask">
     <div class="modal">
       <h2>编辑菜品</h2>
@@ -189,20 +504,38 @@
       <div class="row"><textarea id="editDishNote" rows="2" placeholder="菜品备注（可选）"></textarea></div>
       <div class="row"><img id="editDishPreview" alt="预览" style="width:100%;height:140px;object-fit:cover;border-radius:10px;border:1px solid var(--line);" /></div>
       <div class="row"><input id="editDishImg" type="file" accept="image/*" /></div>
+      <div id="editDishImgStatus" class="muted"></div>
       <div class="row">
         <button class="alt" id="cancelEditBtn">取消</button>
         <button id="saveEditBtn">完成并退出</button>
       </div>
     </div>
   </div>
+  <div class="modal-mask hide" id="albumDetailMask">
+    <div class="modal album-detail">
+      <h2 id="albumDetailTitle"></h2>
+      <img id="albumDetailImg" alt="料理相册大图" />
+      <div class="muted" id="albumDetailDate" style="margin-top:10px;"></div>
+      <p id="albumDetailText"></p>
+      <div class="row"><button class="alt" id="closeAlbumDetailBtn">关闭</button></div>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
     const categories = ["肉类", "海鲜", "蔬菜", "主食", "点心"];
     const params = new URLSearchParams(location.search);
     const DEFAULT_ADMIN_SECRET = "icarus.cooker";
+    const DEFAULT_BIRTHDAY_MESSAGE = "今天这份点菜软件，也是一张小小菜单：把想做给你的饭、想陪你过的日子，都慢慢收进来。生日快乐，熙熙。";
+    const MAX_IMAGE_BYTES = 105 * 1024;
+    const FIRESTORE_SAFE_PAYLOAD_BYTES = 900 * 1024;
+    const DISH_IMAGE_STORAGE_FOLDER = "menu_rooms/main/dishes";
+    const ALBUM_IMAGE_STORAGE_FOLDER = "menu_rooms/main/album";
+    const CELEBRATION_MODE = "celebration";
+    const NORMAL_MODE = "normal";
     const adminModeRequested = params.get("admin") === "1";
     const adminKeyFromUrl = params.get("key") || "";
     let isAdmin = false;
@@ -241,6 +574,10 @@
     const bottomBar = document.getElementById("bottomBar");
     const pickedPanel = document.getElementById("pickedPanel");
     const categoryRail = document.getElementById("categoryRail");
+    const celebrationPanel = document.getElementById("celebrationPanel");
+    const albumPanel = document.getElementById("albumPanel");
+    const albumGrid = document.getElementById("albumGrid");
+    const birthdayInline = document.getElementById("birthdayInline");
 
     function applyRoleUI() {
       if (isAdmin) {
@@ -253,6 +590,8 @@
         dishCard.classList.add("hide");
         bottomBar.classList.add("hide");
         categoryRail.classList.add("hide");
+        celebrationPanel.classList.add("hide");
+        albumPanel.classList.add("hide");
       } else {
         roleTag.textContent = "成员模式";
         adminPanel.classList.add("hide");
@@ -263,6 +602,13 @@
         dishCard.classList.remove("hide");
         bottomBar.classList.remove("hide");
         categoryRail.classList.remove("hide");
+        if (isCelebrationMode()) {
+          celebrationPanel.classList.remove("hide");
+          albumPanel.classList.remove("hide");
+        } else {
+          celebrationPanel.classList.add("hide");
+          albumPanel.classList.add("hide");
+        }
       }
     }
 
@@ -273,24 +619,141 @@
       try { localStorage.setItem(key, value); } catch {}
     }
 
+    function byteLength(value) {
+      return new TextEncoder().encode(String(value || "")).length;
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return `${bytes}B`;
+      return `${Math.round(bytes / 1024)}KB`;
+    }
+
+    function dataUrlBytes(dataUrl) {
+      const match = String(dataUrl || "").match(/^data:[^,]+,([\s\S]*)$/);
+      if (!match) return byteLength(dataUrl);
+      const base64 = match[1];
+      const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+      return Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
+    }
+
+    function statePayloadBytes(state) {
+      return byteLength(JSON.stringify({ state }));
+    }
+
+    function pushFailureText() {
+      return lastPushError || "请检查网络、实时连接状态，或换一张更小的图片后重试";
+    }
+
+    function dishImagePath(dishId) {
+      return `${DISH_IMAGE_STORAGE_FOLDER}/${dishId}.jpg`;
+    }
+
+    function albumImagePath(albumId) {
+      return `${ALBUM_IMAGE_STORAGE_FOLDER}/${albumId}.jpg`;
+    }
+
+    function isDataUrl(value) {
+      return String(value || "").startsWith("data:");
+    }
+
+    async function uploadDishImage(dishId, dataUrl) {
+      if (!dataUrl) return "";
+      if (!isDataUrl(dataUrl)) return dataUrl;
+      if (!storage) return dataUrl;
+      const imgRef = storageRef(storage, dishImagePath(dishId));
+      await uploadString(imgRef, dataUrl, "data_url", {
+        contentType: "image/jpeg",
+        customMetadata: { source: "order-gizmo", compressed: "true" }
+      });
+      const url = await getDownloadURL(imgRef);
+      return `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+    }
+
+    async function uploadAlbumImage(albumId, dataUrl) {
+      if (!dataUrl) return "";
+      if (!isDataUrl(dataUrl)) return dataUrl;
+      if (!storage) return dataUrl;
+      const imgRef = storageRef(storage, albumImagePath(albumId));
+      await uploadString(imgRef, dataUrl, "data_url", {
+        contentType: "image/jpeg",
+        customMetadata: { source: "order-gizmo-album", compressed: "true" }
+      });
+      const url = await getDownloadURL(imgRef);
+      return `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+    }
+
+    async function deleteDishImage(dishId) {
+      if (!storage || !dishId) return;
+      try {
+        await deleteObject(storageRef(storage, dishImagePath(dishId)));
+      } catch (e) {
+        console.warn("delete image skipped", e);
+      }
+    }
+
+    async function deleteAlbumImage(albumId) {
+      if (!storage || !albumId) return;
+      try {
+        await deleteObject(storageRef(storage, albumImagePath(albumId)));
+      } catch (e) {
+        console.warn("delete album image skipped", e);
+      }
+    }
+
+    async function migrateInlineDishImages() {
+      if (!isAdmin || !storage) return;
+      const inlineImages = (roomState.dishes || []).filter((d) => isDataUrl(d.img));
+      if (!inlineImages.length) return;
+      connectStatus.textContent = `正在迁移 ${inlineImages.length} 张旧图片到 Storage...`;
+      try {
+        for (const dish of inlineImages) {
+          dish.img = await uploadDishImage(dish.id, dish.img);
+        }
+      } catch (e) {
+        connectStatus.textContent = `旧图片迁移失败：${e && e.message ? e.message : "Storage 上传失败"}`;
+        return;
+      }
+      const ok = await pushState();
+      connectStatus.textContent = ok
+        ? "旧图片已迁移到 Storage 文件夹"
+        : `旧图片迁移失败：${pushFailureText()}`;
+    }
+
     let member = getStore("member-name") || "";
     memberInput.value = member;
     memberStatus.textContent = member ? `当前昵称：${member}` : "未设置昵称（可直接点菜）";
 
     let roomRef = null;
-    let roomState = { dishes: seed, orders: {}, settings: { allowSubmit: true, adminSecret: DEFAULT_ADMIN_SECRET } };
+    let storage = null;
+    let lastPushError = "";
+    let roomState = {
+      dishes: seed,
+      orders: {},
+      album: [],
+      settings: { allowSubmit: true, adminSecret: DEFAULT_ADMIN_SECRET, mode: NORMAL_MODE, birthdayMessage: DEFAULT_BIRTHDAY_MESSAGE }
+    };
 
     function safeState(raw) {
-      if (!raw || typeof raw !== "object") return { dishes: seed, orders: {}, settings: { allowSubmit: true, adminSecret: DEFAULT_ADMIN_SECRET } };
+      if (!raw || typeof raw !== "object") {
+        return {
+          dishes: seed,
+          orders: {},
+          album: [],
+          settings: { allowSubmit: true, adminSecret: DEFAULT_ADMIN_SECRET, mode: NORMAL_MODE, birthdayMessage: DEFAULT_BIRTHDAY_MESSAGE }
+        };
+      }
       return {
         dishes: Array.isArray(raw.dishes) ? raw.dishes : seed,
         orders: raw.orders && typeof raw.orders === "object" ? raw.orders : {},
+        album: Array.isArray(raw.album) ? raw.album : [],
         settings: raw.settings && typeof raw.settings === "object"
           ? {
               allowSubmit: raw.settings.allowSubmit !== false,
-              adminSecret: raw.settings.adminSecret || DEFAULT_ADMIN_SECRET
+              adminSecret: raw.settings.adminSecret || DEFAULT_ADMIN_SECRET,
+              mode: raw.settings.mode === CELEBRATION_MODE ? CELEBRATION_MODE : NORMAL_MODE,
+              birthdayMessage: raw.settings.birthdayMessage || DEFAULT_BIRTHDAY_MESSAGE
             }
-          : { allowSubmit: true, adminSecret: DEFAULT_ADMIN_SECRET }
+          : { allowSubmit: true, adminSecret: DEFAULT_ADMIN_SECRET, mode: NORMAL_MODE, birthdayMessage: DEFAULT_BIRTHDAY_MESSAGE }
       };
     }
 
@@ -298,28 +761,97 @@
       return (roomState.settings && roomState.settings.adminSecret) || DEFAULT_ADMIN_SECRET;
     }
 
+    function isCelebrationMode() {
+      return roomState.settings && roomState.settings.mode === CELEBRATION_MODE;
+    }
+
+    function birthdayMessage() {
+      return (roomState.settings && roomState.settings.birthdayMessage) || DEFAULT_BIRTHDAY_MESSAGE;
+    }
+
+    function isXixiName(name) {
+      return String(name || "").trim() === "熙熙";
+    }
+
+    function todayKey() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function sortedAlbum() {
+      return [...(roomState.album || [])].sort((a, b) => {
+        const da = a.date || "";
+        const db = b.date || "";
+        if (da !== db) return db.localeCompare(da);
+        return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+      });
+    }
+
+    function showBirthdayMoment() {
+      if (!isCelebrationMode() || !isXixiName(member)) return;
+      const msg = birthdayMessage();
+      birthdayInline.textContent = msg;
+      birthdayInline.classList.remove("hide");
+      const playedKey = `xixi-birthday-played-${todayKey()}`;
+      if (getStore(playedKey) === "1") return;
+      setStore(playedKey, "1");
+      document.getElementById("birthdayOverlayText").textContent = msg;
+      const mask = document.getElementById("birthdayMask");
+      mask.style.animation = "none";
+      void mask.offsetHeight;
+      mask.style.animation = "";
+      mask.classList.remove("hide");
+      setTimeout(() => mask.classList.add("hide"), 5400);
+    }
+
     function syncAdminAccess() {
       isAdmin = adminModeRequested && adminKeyFromUrl === getCloudAdminSecret();
       applyRoleUI();
+    }
+
+    function syncSettingsControls() {
+      const mode = isCelebrationMode() ? CELEBRATION_MODE : NORMAL_MODE;
+      document.querySelectorAll("input[name=appMode]").forEach((input) => {
+        input.checked = input.value === mode;
+      });
+      document.getElementById("birthdayMessageInput").value = birthdayMessage();
+      document.getElementById("allowSubmitToggle").checked = roomState.settings.allowSubmit !== false;
+      document.getElementById("adminSecretInput").value = getCloudAdminSecret();
     }
 
     const defaultCfg = {
       apiKey: "AIzaSyAgd4dHKM0Kh3B7RyzBmP77swBOXNnQdGo",
       authDomain: "order-459ca.firebaseapp.com",
       projectId: "order-459ca",
+      storageBucket: "order-459ca.firebasestorage.app",
       appId: "1:36543886310:web:f8cbc1038e4c774ee79c27"
     };
     const cfg = {
       apiKey: params.get("apiKey") || getStore("fb-apiKey") || defaultCfg.apiKey,
       authDomain: params.get("authDomain") || getStore("fb-authDomain") || defaultCfg.authDomain,
       projectId: params.get("projectId") || getStore("fb-projectId") || defaultCfg.projectId,
+      storageBucket: params.get("storageBucket") || getStore("fb-storageBucket") || defaultCfg.storageBucket,
       appId: params.get("appId") || getStore("fb-appId") || defaultCfg.appId
     };
 
     document.getElementById("fbApiKey").value = cfg.apiKey;
     document.getElementById("fbAuthDomain").value = cfg.authDomain;
     document.getElementById("fbProjectId").value = cfg.projectId;
+    document.getElementById("fbStorageBucket").value = cfg.storageBucket;
     document.getElementById("fbAppId").value = cfg.appId;
+
+    function currentFirebaseParams() {
+      return {
+        apiKey: document.getElementById("fbApiKey").value.trim() || cfg.apiKey,
+        authDomain: document.getElementById("fbAuthDomain").value.trim() || cfg.authDomain,
+        projectId: document.getElementById("fbProjectId").value.trim() || cfg.projectId,
+        storageBucket: document.getElementById("fbStorageBucket").value.trim() || cfg.storageBucket,
+        appId: document.getElementById("fbAppId").value.trim() || cfg.appId
+      };
+    }
 
     function ensureMember(showAlert = true) {
       if (!member) {
@@ -341,17 +873,20 @@
       const apiKey = document.getElementById("fbApiKey").value.trim();
       const authDomain = document.getElementById("fbAuthDomain").value.trim();
       const projectId = document.getElementById("fbProjectId").value.trim();
+      const storageBucket = document.getElementById("fbStorageBucket").value.trim() || `${projectId}.firebasestorage.app`;
       const appId = document.getElementById("fbAppId").value.trim();
-      if (!apiKey || !authDomain || !projectId || !appId) return alert("请填写完整 Firebase 参数");
+      if (!apiKey || !authDomain || !projectId || !storageBucket || !appId) return alert("请填写完整 Firebase 参数");
 
       setStore("fb-apiKey", apiKey);
       setStore("fb-authDomain", authDomain);
       setStore("fb-projectId", projectId);
+      setStore("fb-storageBucket", storageBucket);
       setStore("fb-appId", appId);
 
       connectStatus.textContent = "连接中...";
-      const app = initializeApp({ apiKey, authDomain, projectId, appId }, `app-${projectId}`);
+      const app = initializeApp({ apiKey, authDomain, projectId, storageBucket, appId }, `app-${projectId}`);
       const db = getFirestore(app);
+      storage = getStorage(app);
       roomRef = doc(db, "menu_rooms", "main");
 
       const snap = await getDoc(roomRef);
@@ -361,28 +896,37 @@
         roomState = safeState(snap.data().state);
       }
       syncAdminAccess();
+      await migrateInlineDishImages();
 
       onSnapshot(roomRef, (s) => {
         if (!s.exists()) return;
         roomState = safeState(s.data().state);
         syncAdminAccess();
+        syncSettingsControls();
         render();
       });
 
       syncTag.textContent = "实时中";
-      connectStatus.textContent = "已连接 Firebase 实时同步";
-      document.getElementById("allowSubmitToggle").checked = roomState.settings.allowSubmit !== false;
-      document.getElementById("adminSecretInput").value = getCloudAdminSecret();
+      connectStatus.textContent = "已连接 Firebase 实时同步，图片将保存到 Storage 文件夹";
+      syncSettingsControls();
       render();
     }
 
     async function pushState() {
+      lastPushError = "";
       if (!roomRef) return false;
+      const payloadBytes = statePayloadBytes(roomState);
+      if (payloadBytes > FIRESTORE_SAFE_PAYLOAD_BYTES) {
+        lastPushError = `保存内容约 ${formatBytes(payloadBytes)}，已接近 Firestore 单文档上限；请减少图片数量或换更小图片`;
+        console.warn(lastPushError);
+        return false;
+      }
       try {
         await setDoc(roomRef, { state: roomState, updatedAt: serverTimestamp() }, { merge: true });
         return true;
       } catch (e) {
         console.error(e);
+        lastPushError = e && e.message ? e.message : "写入云端失败";
         return false;
       }
     }
@@ -446,9 +990,9 @@
         el.className = "dish";
         const imgSrc = d.img || buildDishImage(d.name);
         el.innerHTML = `
+          <img src="${imgSrc}" alt="${d.name}">
           <strong>${d.name}</strong>
           <div class="muted">${d.cat}${d.note ? ` | ${d.note}` : ""}</div>
-          <img src="${imgSrc}" alt="${d.name}">
           <div class="admin-dish-actions">
             <button class="alt" data-edit="${d.id}">编辑</button>
             <button class="warn" data-del="${d.id}">删除</button>
@@ -464,11 +1008,108 @@
             if (o.picks) delete o.picks[d.id];
             if (o.notes) delete o.notes[d.id];
           });
+          await deleteDishImage(d.id);
           await pushState();
           render();
         };
         box.appendChild(el);
       });
+    }
+
+    function renderAlbum() {
+      const items = sortedAlbum();
+      albumGrid.innerHTML = "";
+      if (!items.length) {
+        albumGrid.innerHTML = "<div class='muted'>这里还在等第一顿被认真记下来的饭。</div>";
+        return;
+      }
+      items.forEach((item) => {
+        const btn = document.createElement("button");
+        btn.className = "album-tile";
+        const img = item.img || buildDishImage(item.title || "料理");
+        btn.innerHTML = `<img src="${img}" alt="${item.title || "料理相册"}"><span class="album-caption"><strong>${item.title || "一顿饭"}</strong><span>${item.date || "没有日期"}</span></span>`;
+        btn.onclick = () => openAlbumDetail(item.id);
+        albumGrid.appendChild(btn);
+      });
+    }
+
+    function renderAdminAlbumList() {
+      const box = document.getElementById("adminAlbumList");
+      if (!box || !isAdmin) return;
+      const items = sortedAlbum();
+      box.innerHTML = "";
+      if (!items.length) {
+        box.innerHTML = "<div class='muted'>还没有相册记录。</div>";
+        return;
+      }
+      items.forEach((item) => {
+        const el = document.createElement("div");
+        el.className = "album-admin-item";
+        const img = item.img || buildDishImage(item.title || "料理");
+        el.innerHTML = `
+          <img src="${img}" alt="${item.title || "料理记录"}">
+          <div class="album-admin-body">
+            <strong>${item.title || "一顿饭"}</strong>
+            <div class="muted">${item.date || "没有日期"}</div>
+            <div class="muted">${item.text || ""}</div>
+            <div class="album-admin-actions">
+              <button class="alt" data-album-edit="${item.id}">编辑</button>
+              <button class="warn" data-album-del="${item.id}">删除</button>
+            </div>
+          </div>
+        `;
+        el.querySelector("[data-album-edit]").onclick = () => openAlbumEditor(item.id);
+        el.querySelector("[data-album-del]").onclick = async () => {
+          if (!confirm(`确认删除 ${item.title || "这条记录"} ?`)) return;
+          roomState.album = (roomState.album || []).filter((x) => x.id !== item.id);
+          await deleteAlbumImage(item.id);
+          const ok = await pushState();
+          if (!ok) return alert(`删除失败：${pushFailureText()}`);
+          render();
+        };
+        box.appendChild(el);
+      });
+    }
+
+    function openAlbumDetail(albumId) {
+      const item = (roomState.album || []).find((x) => x.id === albumId);
+      if (!item) return;
+      document.getElementById("albumDetailTitle").textContent = item.title || "一顿饭";
+      document.getElementById("albumDetailImg").src = item.img || buildDishImage(item.title || "料理");
+      document.getElementById("albumDetailDate").textContent = item.date || "";
+      document.getElementById("albumDetailText").textContent = item.text || "";
+      document.getElementById("albumDetailMask").classList.remove("hide");
+    }
+
+    let editAlbumId = "";
+    let editAlbumImgData = "";
+    function openAlbumEditor(albumId) {
+      const item = (roomState.album || []).find((x) => x.id === albumId);
+      if (!item) return;
+      editAlbumId = albumId;
+      editAlbumImgData = item.img || "";
+      document.getElementById("albumTitle").value = item.title || "";
+      document.getElementById("albumDate").value = item.date || "";
+      document.getElementById("albumText").value = item.text || "";
+      document.getElementById("albumImg").value = "";
+      document.getElementById("albumImg").dataset.loading = "";
+      document.getElementById("albumImgStatus").textContent = item.img ? "保留当前图片；如需替换请选择新图片" : "";
+      document.getElementById("saveAlbumBtn").textContent = "保存相册记录";
+      document.getElementById("cancelAlbumEditBtn").classList.remove("hide");
+    }
+
+    function resetAlbumEditor() {
+      editAlbumId = "";
+      editAlbumImgData = "";
+      ["albumTitle", "albumDate", "albumText"].forEach((id) => { document.getElementById(id).value = ""; });
+      document.getElementById("albumDate").value = todayKey();
+      const input = document.getElementById("albumImg");
+      input.value = "";
+      input.dataset.base64 = "";
+      input.dataset.loading = "";
+      document.getElementById("albumImgStatus").textContent = "";
+      document.getElementById("saveAlbumBtn").textContent = "添加相册记录";
+      document.getElementById("cancelAlbumEditBtn").classList.add("hide");
     }
 
     let editDishId = "";
@@ -482,11 +1123,19 @@
       document.getElementById("editDishCat").value = d.cat;
       document.getElementById("editDishNote").value = d.note || "";
       document.getElementById("editDishPreview").src = d.img || buildDishImage(d.name);
-      document.getElementById("editDishImg").value = "";
+      const imgInput = document.getElementById("editDishImg");
+      imgInput.value = "";
+      imgInput.dataset.loading = "";
+      document.getElementById("editDishImgStatus").textContent = "";
       document.getElementById("editModalMask").classList.remove("hide");
     }
 
     function render() {
+      applyRoleUI();
+      if (!isCelebrationMode() || !isXixiName(member)) {
+        birthdayInline.classList.add("hide");
+        birthdayInline.textContent = "";
+      }
       const box = document.getElementById("dishList");
       const kw = document.getElementById("search").value.trim();
       const dishes = roomState.dishes || [];
@@ -504,7 +1153,7 @@
           const el = document.createElement("div");
           const imgSrc = d.img || buildDishImage(d.name);
           el.className = "dish";
-          el.innerHTML = `<div class="row"><strong>${d.name}</strong></div><img src="${imgSrc}" alt="${d.name}">${d.note ? `<div class="muted">${d.note}</div>` : ""}<div class="row"><label><input type="checkbox" ${mine[d.id] ? "checked" : ""}/> 我想点这个</label></div><div class="row"><input placeholder="本次备注（可选）" value="${myNotes[d.id] || ""}" /></div>`;
+          el.innerHTML = `<img src="${imgSrc}" alt="${d.name}"><div class="row"><strong>${d.name}</strong></div>${d.note ? `<div class="muted">${d.note}</div>` : "<div class='muted'>暂无备注</div>"}<div class="row"><label><input type="checkbox" ${mine[d.id] ? "checked" : ""}/> 我想点这个</label></div><div class="row"><input placeholder="本次备注（可选）" value="${myNotes[d.id] || ""}" /></div>`;
           el.querySelector("input[type=checkbox]").onchange = (e) => togglePick(d.id, e.target.checked);
           el.querySelector("input[placeholder]").onchange = (e) => saveTempNote(d.id, e.target.value.trim());
           sec.appendChild(el);
@@ -513,7 +1162,10 @@
       });
       renderSummary();
       renderAdminDishList();
+      renderAlbum();
+      renderAdminAlbumList();
       renderPickedPanel();
+      if (!isAdmin) showBirthdayMoment();
     }
 
     function renderSummary() {
@@ -604,6 +1256,7 @@
       memberStatus.textContent = `当前昵称：${member}`;
       pushState();
       render();
+      showBirthdayMoment();
       alert(`已进入：${member}`);
     };
     document.getElementById("submitOrderBtn").onclick = async () => {
@@ -625,36 +1278,167 @@
       if (ok) {
         alert("提交成功");
       } else {
-        alert("提交失败：请先确认网络或实时连接状态后重试");
+        alert(`提交失败：${pushFailureText()}`);
       }
     };
     document.getElementById("pickedBtn").onclick = () => {
       pickedPanel.classList.toggle("hide");
       renderPickedPanel();
     };
+    document.getElementById("albumJumpBtn").onclick = () => {
+      albumPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    document.getElementById("closeAlbumDetailBtn").onclick = () => {
+      document.getElementById("albumDetailMask").classList.add("hide");
+    };
+    document.getElementById("cancelAlbumEditBtn").onclick = resetAlbumEditor;
     document.getElementById("search").addEventListener("input", render);
     document.getElementById("dishImg").addEventListener("change", async (e) => {
       const f = e.target.files[0];
       if (!f) return;
-      document.getElementById("dishImg").dataset.base64 = await compressImageToDataURL(f, 1280, 0.82);
+      const input = document.getElementById("dishImg");
+      const status = document.getElementById("dishImgStatus");
+      const btn = document.getElementById("addDish");
+      const token = makeId();
+      input.dataset.token = token;
+      input.dataset.base64 = "";
+      input.dataset.loading = "1";
+      status.textContent = "图片压缩中...";
+      btn.disabled = true;
+      try {
+        const dataUrl = await compressImageToDataURL(f);
+        if (input.dataset.token !== token) return;
+        input.dataset.base64 = dataUrl;
+        status.textContent = `图片已压缩，约 ${formatBytes(dataUrlBytes(dataUrl))}`;
+      } catch (err) {
+        if (input.dataset.token !== token) return;
+        input.value = "";
+        status.textContent = err && err.message ? err.message : "图片处理失败，请换一张图片";
+        alert(status.textContent);
+      } finally {
+        if (input.dataset.token === token) {
+          input.dataset.loading = "";
+          btn.disabled = false;
+        }
+      }
     });
+    document.getElementById("albumImg").addEventListener("change", async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const input = document.getElementById("albumImg");
+      const status = document.getElementById("albumImgStatus");
+      const btn = document.getElementById("saveAlbumBtn");
+      const token = makeId();
+      input.dataset.token = token;
+      input.dataset.base64 = "";
+      input.dataset.loading = "1";
+      status.textContent = "图片压缩中...";
+      btn.disabled = true;
+      try {
+        const dataUrl = await compressImageToDataURL(f);
+        if (input.dataset.token !== token) return;
+        input.dataset.base64 = dataUrl;
+        editAlbumImgData = dataUrl;
+        status.textContent = `图片已压缩，约 ${formatBytes(dataUrlBytes(dataUrl))}`;
+      } catch (err) {
+        if (input.dataset.token !== token) return;
+        input.value = "";
+        status.textContent = err && err.message ? err.message : "图片处理失败，请换一张图片";
+        alert(status.textContent);
+      } finally {
+        if (input.dataset.token === token) {
+          input.dataset.loading = "";
+          btn.disabled = false;
+        }
+      }
+    });
+    document.getElementById("saveAlbumBtn").onclick = async () => {
+      const title = document.getElementById("albumTitle").value.trim();
+      const date = document.getElementById("albumDate").value;
+      const text = document.getElementById("albumText").value.trim();
+      const imgInput = document.getElementById("albumImg");
+      if (imgInput.dataset.loading === "1") return alert("图片仍在压缩，请稍后再保存");
+      if (!title) return alert("请输入相册标题");
+      if (!date) return alert("请选择日期");
+      const oldItem = (roomState.album || []).find((x) => x.id === editAlbumId);
+      const albumId = editAlbumId || makeId();
+      let img = editAlbumImgData || (oldItem && oldItem.img) || "";
+      if (!img) return alert("请选择一张照片");
+      const btn = document.getElementById("saveAlbumBtn");
+      const status = document.getElementById("albumImgStatus");
+      if (isDataUrl(img)) {
+        try {
+          btn.disabled = true;
+          status.textContent = "图片上传中...";
+          img = await uploadAlbumImage(albumId, img);
+          status.textContent = "图片已上传到相册文件夹";
+        } catch (err) {
+          btn.disabled = false;
+          const msg = err && err.message ? err.message : "图片上传失败";
+          return alert(`保存失败：${msg}`);
+        }
+      }
+      const nextItem = { id: albumId, title, date, text, img, createdAt: (oldItem && oldItem.createdAt) || new Date().toISOString() };
+      const oldAlbum = [...(roomState.album || [])];
+      if (oldItem) {
+        roomState.album = oldAlbum.map((x) => x.id === albumId ? nextItem : x);
+      } else {
+        roomState.album = [nextItem, ...oldAlbum];
+      }
+      const ok = await pushState();
+      if (!ok) {
+        roomState.album = oldAlbum;
+        if (!oldItem) await deleteAlbumImage(albumId);
+        btn.disabled = false;
+        return alert(`保存失败：${pushFailureText()}`);
+      }
+      btn.disabled = false;
+      resetAlbumEditor();
+      render();
+      alert("相册记录已保存");
+    };
     document.getElementById("addDish").onclick = async () => {
       const name = document.getElementById("dishName").value.trim();
       const cat = document.getElementById("dishCat").value;
       const note = document.getElementById("dishNote").value.trim();
-      const img = document.getElementById("dishImg").dataset.base64 || "";
-      if (!name) return alert("请输入菜名");
-      roomState.dishes.unshift({ id: makeId(), name, cat, note, img });
-      await pushState();
-      ["dishName", "dishNote"].forEach((id) => { document.getElementById(id).value = ""; });
       const imgInput = document.getElementById("dishImg");
+      if (imgInput.dataset.loading === "1") return alert("图片仍在压缩，请稍后再添加");
+      let img = imgInput.dataset.base64 || "";
+      if (!name) return alert("请输入菜名");
+      const dishId = makeId();
+      const status = document.getElementById("dishImgStatus");
+      const btn = document.getElementById("addDish");
+      if (img) {
+        try {
+          btn.disabled = true;
+          status.textContent = "图片上传中...";
+          img = await uploadDishImage(dishId, img);
+          status.textContent = "图片已上传到云端文件夹";
+        } catch (err) {
+          btn.disabled = false;
+          const msg = err && err.message ? err.message : "图片上传失败";
+          return alert(`添加失败：${msg}`);
+        }
+      }
+      const dish = { id: dishId, name, cat, note, img };
+      roomState.dishes.unshift(dish);
+      const ok = await pushState();
+      if (!ok) {
+        roomState.dishes = roomState.dishes.filter((x) => x.id !== dish.id);
+        await deleteDishImage(dish.id);
+        btn.disabled = false;
+        return alert(`添加失败：${pushFailureText()}`);
+      }
+      ["dishName", "dishNote"].forEach((id) => { document.getElementById(id).value = ""; });
       imgInput.value = "";
       imgInput.dataset.base64 = "";
+      document.getElementById("dishImgStatus").textContent = "";
+      btn.disabled = false;
       render();
     };
     document.getElementById("shareBtn").onclick = async () => {
       const base = `${location.origin}${location.pathname}`;
-      const q = new URLSearchParams({ apiKey: cfg.apiKey, authDomain: cfg.authDomain, projectId: cfg.projectId, appId: cfg.appId });
+      const q = new URLSearchParams(currentFirebaseParams());
       await navigator.clipboard.writeText(`${base}?${q.toString()}`);
       alert("成员链接已复制");
     };
@@ -667,12 +1451,12 @@
         return;
       }
       const base = `${location.origin}${location.pathname}`;
-      const q = new URLSearchParams({ admin: "1", key: secret, apiKey: cfg.apiKey, authDomain: cfg.authDomain, projectId: cfg.projectId, appId: cfg.appId });
+      const q = new URLSearchParams({ admin: "1", key: secret, ...currentFirebaseParams() });
       location.href = `${base}?${q.toString()}`;
     };
     document.getElementById("shareAdminBtn").onclick = async () => {
       const base = `${location.origin}${location.pathname}`;
-      const q = new URLSearchParams({ admin: "1", key: getCloudAdminSecret(), apiKey: cfg.apiKey, authDomain: cfg.authDomain, projectId: cfg.projectId, appId: cfg.appId });
+      const q = new URLSearchParams({ admin: "1", key: getCloudAdminSecret(), ...currentFirebaseParams() });
       await navigator.clipboard.writeText(`${base}?${q.toString()}`);
       alert("管理员链接已复制");
     };
@@ -697,25 +1481,71 @@
     document.getElementById("editDishImg").addEventListener("change", async (e) => {
       const f = e.target.files[0];
       if (!f) return;
-      editDishImgData = await compressImageToDataURL(f, 1280, 0.82);
-      document.getElementById("editDishPreview").src = editDishImgData;
+      const input = document.getElementById("editDishImg");
+      const status = document.getElementById("editDishImgStatus");
+      const btn = document.getElementById("saveEditBtn");
+      const token = makeId();
+      input.dataset.token = token;
+      input.dataset.loading = "1";
+      status.textContent = "图片压缩中...";
+      btn.disabled = true;
+      try {
+        const dataUrl = await compressImageToDataURL(f);
+        if (input.dataset.token !== token) return;
+        editDishImgData = dataUrl;
+        document.getElementById("editDishPreview").src = editDishImgData;
+        status.textContent = `图片已压缩，约 ${formatBytes(dataUrlBytes(dataUrl))}`;
+      } catch (err) {
+        if (input.dataset.token !== token) return;
+        input.value = "";
+        status.textContent = err && err.message ? err.message : "图片处理失败，请换一张图片";
+        alert(status.textContent);
+      } finally {
+        if (input.dataset.token === token) {
+          input.dataset.loading = "";
+          btn.disabled = false;
+        }
+      }
     });
     document.getElementById("saveEditBtn").onclick = async () => {
       const d = roomState.dishes.find((x) => x.id === editDishId);
       if (!d) return;
+      if (document.getElementById("editDishImg").dataset.loading === "1") return alert("图片仍在压缩，请稍后再保存");
       const name = document.getElementById("editDishName").value.trim();
       const cat = document.getElementById("editDishCat").value;
       const note = document.getElementById("editDishNote").value.trim();
       if (!name) return alert("菜名不能为空");
+      const oldDish = { name: d.name, cat: d.cat, note: d.note || "", img: d.img || "" };
+      let nextImg = editDishImgData || d.img || "";
+      const status = document.getElementById("editDishImgStatus");
+      const btn = document.getElementById("saveEditBtn");
+      if (isDataUrl(nextImg)) {
+        try {
+          btn.disabled = true;
+          status.textContent = "图片上传中...";
+          nextImg = await uploadDishImage(d.id, nextImg);
+          status.textContent = "图片已上传到云端文件夹";
+        } catch (err) {
+          btn.disabled = false;
+          const msg = err && err.message ? err.message : "图片上传失败";
+          return alert(`保存失败：${msg}`);
+        }
+      }
       d.name = name;
       d.cat = categories.includes(cat) ? cat : d.cat;
       d.note = note;
-      d.img = editDishImgData || d.img || "";
+      d.img = nextImg;
       const ok = await pushState();
       if (!ok) {
-        alert("保存失败：请检查连接后重试");
+        d.name = oldDish.name;
+        d.cat = oldDish.cat;
+        d.note = oldDish.note;
+        d.img = oldDish.img;
+        btn.disabled = false;
+        alert(`保存失败：${pushFailureText()}`);
         return;
       }
+      btn.disabled = false;
       document.getElementById("editModalMask").classList.add("hide");
       render();
       alert("编辑完成，已退出编辑页面");
@@ -726,41 +1556,74 @@
       if (!v) return alert("管理员口令不能为空");
       roomState.settings.adminSecret = v;
       pushState().then((ok) => {
-        if (!ok) return alert("管理员口令保存失败，请重试");
+        if (!ok) return alert(`管理员口令保存失败：${pushFailureText()}`);
         alert("管理员口令已保存到云端");
       });
+    };
+    document.getElementById("saveCelebrationBtn").onclick = async () => {
+      const selectedMode = document.querySelector("input[name=appMode]:checked").value;
+      const message = document.getElementById("birthdayMessageInput").value.trim() || DEFAULT_BIRTHDAY_MESSAGE;
+      roomState.settings.mode = selectedMode === CELEBRATION_MODE ? CELEBRATION_MODE : NORMAL_MODE;
+      roomState.settings.birthdayMessage = message;
+      const ok = await pushState();
+      if (!ok) return alert(`生日设置保存失败：${pushFailureText()}`);
+      syncSettingsControls();
+      render();
+      alert("生日设置已保存");
     };
     document.getElementById("allowSubmitToggle").onchange = async (e) => {
       roomState.settings.allowSubmit = !!e.target.checked;
       const ok = await pushState();
-      if (!ok) alert("保存提交开关失败，请重试");
+      if (!ok) alert(`保存提交开关失败：${pushFailureText()}`);
     };
 
     wireCategoryRail();
     applyRoleUI();
-    document.getElementById("adminSecretInput").value = getCloudAdminSecret();
-    if (cfg.apiKey && cfg.authDomain && cfg.projectId && cfg.appId) {
+    syncSettingsControls();
+    document.getElementById("albumDate").value = todayKey();
+    if (cfg.apiKey && cfg.authDomain && cfg.projectId && cfg.storageBucket && cfg.appId) {
       connectFirebase();
     } else {
       syncTag.textContent = "本地模式";
       render();
     }
 
-    async function compressImageToDataURL(file, maxSide = 1280, quality = 0.82) {
+    async function compressImageToDataURL(file, maxSide = 900, quality = 0.76, maxImageBytes = MAX_IMAGE_BYTES) {
       const raw = await fileToDataURL(file);
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-          const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
-          const w = Math.max(1, Math.round(img.width * ratio));
-          const h = Math.max(1, Math.round(img.height * ratio));
           const c = document.createElement("canvas");
-          c.width = w; c.height = h;
           const ctx = c.getContext("2d");
-          ctx.drawImage(img, 0, 0, w, h);
-          resolve(c.toDataURL("image/jpeg", quality));
+          let side = maxSide;
+          let q = quality;
+          let best = "";
+
+          for (let i = 0; i < 8; i += 1) {
+            const ratio = Math.min(1, side / Math.max(img.width, img.height));
+            const w = Math.max(1, Math.round(img.width * ratio));
+            const h = Math.max(1, Math.round(img.height * ratio));
+            c.width = w;
+            c.height = h;
+            ctx.drawImage(img, 0, 0, w, h);
+            best = c.toDataURL("image/jpeg", q);
+            if (dataUrlBytes(best) <= maxImageBytes) {
+              resolve(best);
+              return;
+            }
+            side = Math.max(360, Math.round(side * 0.78));
+            q = Math.max(0.48, q - 0.08);
+          }
+
+          reject(new Error(`图片压缩后仍有 ${formatBytes(dataUrlBytes(best))}，请换一张更小的图片`));
         };
-        img.onerror = () => resolve(raw);
+        img.onerror = () => {
+          if (dataUrlBytes(raw) <= maxImageBytes) {
+            resolve(raw);
+          } else {
+            reject(new Error("图片格式无法压缩，请换一张更小的图片"));
+          }
+        };
         img.src = raw;
       });
     }
