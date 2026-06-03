@@ -18,6 +18,12 @@
       --rose: #c98b85;
       --night: #211817;
       --shadow: 0 10px 28px rgba(66, 43, 35, 0.09);
+      --gift-velvet: #160d0f;
+      --gift-velvet-2: #3f2524;
+      --gift-rose: #bc786d;
+      --gift-rose-dark: #6f3631;
+      --gift-gold: #ffd98f;
+      --gift-cream: #fff1e6;
     }
     * { box-sizing: border-box; }
     body {
@@ -27,6 +33,7 @@
       background: linear-gradient(180deg, #f0e3dc 0%, var(--bg) 260px);
       color: var(--ink);
     }
+    body.birthday-gift-active { overflow: hidden; }
     .wrap { max-width: 980px; margin: 0 auto; padding: 18px 14px 104px; }
     .card {
       background: rgba(255, 255, 255, 0.96);
@@ -284,19 +291,312 @@
       padding: 16px;
       box-shadow: 0 22px 70px rgba(0, 0, 0, 0.24);
     }
+    .birthday-gift-mask,
     .birthday-mask {
       position: fixed;
       inset: 0;
-      z-index: 70;
       display: grid;
       place-items: center;
       padding: 22px;
+      color: var(--gift-cream);
+    }
+    .birthday-gift-mask {
+      z-index: 74;
       background:
-        radial-gradient(circle at 30% 20%, rgba(255, 220, 202, 0.28), transparent 32%),
-        radial-gradient(circle at 80% 78%, rgba(201, 139, 133, 0.22), transparent 34%),
-        linear-gradient(135deg, #180f10, #4c2c2a 55%, #221516);
-      color: #fff1e9;
+        radial-gradient(circle at 50% 52%, rgba(255, 201, 130, 0.22), transparent 28%),
+        radial-gradient(circle at 30% 20%, rgba(188, 120, 109, 0.22), transparent 30%),
+        radial-gradient(circle at 82% 74%, rgba(255, 217, 143, 0.15), transparent 30%),
+        linear-gradient(145deg, var(--gift-velvet), #2d191a 54%, #120a0c);
+      overflow: hidden;
+    }
+    .birthday-gift-mask.hide { display: none; }
+    .gift-sparks,
+    .gift-stage::before,
+    .gift-stage::after {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .gift-sparks span {
+      position: absolute;
+      left: var(--x);
+      top: var(--y);
+      width: var(--s);
+      height: var(--s);
+      border-radius: 50%;
+      background: var(--c);
+      opacity: 0.42;
+      filter: blur(0.5px) drop-shadow(0 0 10px var(--c));
+      animation: giftSparkFloat 3.8s ease-in-out infinite;
+      animation-delay: var(--d);
+    }
+    .gift-stage {
+      position: relative;
+      width: min(560px, 86vw);
+      height: min(560px, 70vh);
+      min-height: 360px;
+      display: grid;
+      place-items: center;
+      isolation: isolate;
+    }
+    .gift-stage::before {
+      content: "";
+      background:
+        radial-gradient(ellipse at center, rgba(255, 214, 154, 0.2), transparent 36%),
+        radial-gradient(ellipse at center, rgba(255, 241, 230, 0.08), transparent 58%);
+      transform: scale(0.9);
+      opacity: 0;
+      animation: giftSpotlight 1.6s ease 0.55s forwards;
+    }
+    .gift-stage::after {
+      content: "";
+      width: min(72vw, 360px);
+      height: min(72vw, 360px);
+      margin: auto;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 217, 143, 0.08), transparent 68%);
+      transform: scale(0.6);
+      opacity: 0;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .birthday-gift-mask.is-ready .gift-stage::after,
+    .birthday-gift-mask.is-opening .gift-stage::after {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .gift-shadow {
+      position: absolute;
+      left: 50%;
+      top: 66%;
+      width: min(54vw, 280px);
+      height: 48px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(0, 0, 0, 0.34), transparent 70%);
+      transform: translateX(-50%) scale(0.42);
+      opacity: 0;
+      animation: giftShadowLand 1.85s cubic-bezier(.2,.88,.25,1) forwards;
+      pointer-events: none;
+    }
+    .gift-box-shell {
+      --pull: 0px;
+      --ribbon-alpha: 1;
+      --final-pull: 260px;
+      position: relative;
+      width: min(58vw, 286px);
+      aspect-ratio: 1 / 0.82;
+      border-radius: 16px;
+      transform-origin: center;
+      animation: giftDropIn 1.85s cubic-bezier(.18,.92,.22,1) forwards;
+      z-index: 2;
+    }
+    .gift-box {
+      position: absolute;
+      inset: 18% 7% 5%;
+      border-radius: 14px;
+      overflow: visible;
+      background:
+        radial-gradient(circle at 18% 14%, rgba(255,255,255,0.42), transparent 23%),
+        linear-gradient(90deg, rgba(255,255,255,0.28), transparent 24%, transparent 72%, rgba(111,54,49,0.08)),
+        linear-gradient(135deg, #f9ddca, #d89b87 48%, #a85f58);
+      border: 1px solid rgba(255, 238, 226, 0.54);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.48),
+        inset 0 -24px 48px rgba(116, 55, 50, 0.28),
+        0 24px 58px rgba(10, 5, 6, 0.42);
+    }
+    .gift-box::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255, 238, 218, 0.18), transparent 22%),
+        radial-gradient(circle at 78% 90%, rgba(98, 44, 45, 0.28), transparent 30%);
+      pointer-events: none;
+    }
+    .gift-lid {
+      position: absolute;
+      left: 3%;
+      right: 3%;
+      top: 3%;
+      height: 31%;
+      border-radius: 16px 16px 10px 10px;
+      background:
+        radial-gradient(circle at 16% 22%, rgba(255,255,255,0.44), transparent 28%),
+        linear-gradient(90deg, rgba(255,255,255,0.26), transparent 26%, transparent 70%, rgba(111,54,49,0.08)),
+        linear-gradient(135deg, #ffe6d4, #d99c88 50%, #ae655c);
+      border: 1px solid rgba(255, 238, 226, 0.56);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.28),
+        0 18px 28px rgba(20, 8, 9, 0.26);
+      z-index: 4;
+      transform-origin: 50% 95%;
+      transition: transform 0.95s cubic-bezier(.18,.9,.18,1), opacity 0.75s ease, filter 0.75s ease;
+    }
+    .gift-ribbon {
+      position: absolute;
+      z-index: 6;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.28), transparent 18%, transparent 82%, rgba(255,255,255,0.18)),
+        linear-gradient(135deg, #f2b49f, #b86b60 48%, #6c3430);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.34),
+        0 9px 22px rgba(83, 34, 34, 0.3);
+    }
+    .gift-ribbon-vertical {
+      top: 2%;
+      bottom: 5%;
+      left: 50%;
+      width: 17%;
+      border-radius: 10px;
+      transform: translateX(-50%);
+    }
+    .gift-ribbon-horizontal {
+      left: 7%;
+      right: 7%;
+      top: 45%;
+      height: 19%;
+      border-radius: 999px;
+      cursor: grab;
+      transform: translateX(var(--pull));
+      opacity: var(--ribbon-alpha);
+      transition: transform 0.35s cubic-bezier(.2,.85,.22,1), opacity 0.25s ease;
+      touch-action: none;
+    }
+    .gift-ribbon-horizontal::before,
+    .gift-ribbon-horizontal::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .gift-ribbon-horizontal::before {
+      left: 50%;
+      width: 56px;
+      height: 38px;
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at 38% 34%, rgba(255,255,255,0.34), transparent 28%),
+        linear-gradient(135deg, #f5baa6, #b8675d 54%, #743832);
+      border: 1px solid rgba(255, 226, 213, 0.56);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.32),
+        0 9px 18px rgba(48, 19, 20, 0.24);
+    }
+    .gift-ribbon-horizontal::after {
+      left: 50%;
+      width: 92px;
+      height: 2px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, rgba(255, 237, 224, 0.6), transparent);
+    }
+    .gift-pull {
+      position: absolute;
+      right: -9%;
+      top: 48%;
+      z-index: 8;
+      width: 58px;
+      height: 58px;
+      min-height: 58px;
+      padding: 0;
+      border: 1px solid rgba(255, 241, 220, 0.62);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #fff7df, var(--gift-gold) 44%, #c77e5f 100%);
+      box-shadow:
+        0 0 0 0 rgba(255, 217, 143, 0.46),
+        0 0 28px rgba(255, 217, 143, 0.42),
+        0 14px 28px rgba(33, 11, 13, 0.28);
+      transform: translate(42%, -50%) translateX(var(--pull));
+      opacity: var(--ribbon-alpha);
+      transition: transform 0.35s cubic-bezier(.2,.85,.22,1), opacity 0.25s ease, box-shadow 0.3s ease;
+      touch-action: none;
+    }
+    .gift-pull::before {
+      content: "";
+      position: absolute;
+      inset: 18px 16px 18px 19px;
+      border-top: 3px solid rgba(84, 38, 33, 0.76);
+      border-right: 3px solid rgba(84, 38, 33, 0.76);
+      transform: rotate(45deg);
+    }
+    .gift-trail {
+      position: absolute;
+      left: calc(50% + 68px);
+      top: 48%;
+      width: 118px;
+      height: 2px;
+      z-index: 7;
+      background: linear-gradient(90deg, rgba(255, 217, 143, 0), rgba(255, 217, 143, 0.74), rgba(255, 217, 143, 0));
+      opacity: 0;
+      transform: translateY(-50%) scaleX(0.3);
+      transform-origin: left;
+      pointer-events: none;
+    }
+    .gift-inside-light,
+    .gift-glow {
+      position: absolute;
+      inset: 20% 18% 8%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 236, 179, 0.98), rgba(255, 193, 108, 0.34) 44%, transparent 70%);
+      opacity: 0;
+      filter: blur(2px);
+      transform: scale(0.54);
+      transition: opacity 0.7s ease, transform 0.9s ease;
+      pointer-events: none;
+      z-index: 3;
+    }
+    .gift-inside-light {
+      inset: 20% 4% -24%;
+      z-index: 1;
+      filter: blur(13px);
+    }
+    .birthday-gift-mask.is-ready .gift-pull {
+      animation: giftHandlePulse 1.35s ease-in-out infinite;
+    }
+    .birthday-gift-mask.is-ready .gift-trail {
+      opacity: 0.9;
+      animation: giftGuideSweep 1.6s ease-in-out infinite;
+    }
+    .birthday-gift-mask.is-dragging .gift-ribbon-horizontal,
+    .birthday-gift-mask.is-dragging .gift-pull {
+      cursor: grabbing;
+      transition: none;
+    }
+    .birthday-gift-mask.is-resetting .gift-ribbon-horizontal,
+    .birthday-gift-mask.is-resetting .gift-pull {
+      transition: transform 0.36s cubic-bezier(.2,.85,.22,1), opacity 0.25s ease;
+    }
+    .birthday-gift-mask.is-opening .gift-ribbon-horizontal,
+    .birthday-gift-mask.is-opening .gift-pull {
+      opacity: 0;
+      transform: translateX(var(--final-pull));
+      transition: transform 0.72s cubic-bezier(.18,.88,.2,1), opacity 0.38s ease;
+    }
+    .birthday-gift-mask.is-opening .gift-pull {
+      transform: translate(42%, -50%) translateX(var(--final-pull));
+    }
+    .birthday-gift-mask.is-opening .gift-lid {
+      transform: translateY(-76px) scale(0.84) rotate(-5deg);
+      opacity: 0.32;
+      filter: blur(1px);
+    }
+    .birthday-gift-mask.is-opening .gift-glow,
+    .birthday-gift-mask.is-opening .gift-inside-light {
+      opacity: 1;
+      transform: scale(1.24);
+    }
+    .birthday-gift-mask.is-opening .gift-box-shell {
+      animation: giftOpenLift 1s ease forwards;
+    }
+    .birthday-mask {
+      z-index: 70;
+      background:
+        radial-gradient(circle at 50% 52%, rgba(255, 217, 143, 0.2), transparent 30%),
+        radial-gradient(circle at 30% 20%, rgba(188, 120, 109, 0.24), transparent 32%),
+        radial-gradient(circle at 80% 78%, rgba(255, 191, 168, 0.2), transparent 34%),
+        linear-gradient(135deg, var(--gift-velvet), var(--gift-velvet-2) 55%, #160d0f);
       animation: birthdayFade 5.2s ease forwards;
+      overflow: hidden;
     }
     .birthday-mask.hide { display: none; }
     .fireworks {
@@ -314,36 +614,64 @@
       border-radius: 50%;
       background: var(--c);
       box-shadow:
-        0 -34px 0 var(--c),
-        24px -24px 0 var(--c),
-        34px 0 0 var(--c),
-        24px 24px 0 var(--c),
-        0 34px 0 var(--c),
-        -24px 24px 0 var(--c),
-        -34px 0 0 var(--c),
-        -24px -24px 0 var(--c);
+        0 -38px 0 var(--c),
+        27px -27px 0 var(--c),
+        38px 0 0 var(--c),
+        27px 27px 0 var(--c),
+        0 38px 0 var(--c),
+        -27px 27px 0 var(--c),
+        -38px 0 0 var(--c),
+        -27px -27px 0 var(--c);
       opacity: 0;
       animation: fireworkBurst 1.55s ease-out infinite;
       animation-delay: var(--d);
       filter: drop-shadow(0 0 10px var(--c));
     }
     .birthday-scene {
+      position: relative;
       width: min(720px, 92vw);
       text-align: center;
-      padding: 28px;
-      border: 1px solid rgba(255, 230, 218, 0.22);
-      border-radius: 10px;
-      background: rgba(31, 20, 19, 0.46);
-      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.36);
+      padding: clamp(30px, 7vw, 58px) clamp(22px, 6vw, 48px);
+      border: 1px solid rgba(255, 230, 218, 0.2);
+      border-radius: 16px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 217, 143, 0.18), transparent 42%),
+        rgba(31, 20, 19, 0.38);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 30px 90px rgba(0, 0, 0, 0.38);
+      backdrop-filter: blur(8px);
       animation: birthdayRise 1.1s ease both;
+      overflow: hidden;
+    }
+    .birthday-scene::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -140px;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 217, 143, 0.32), transparent 68%);
+      transform: translateX(-50%);
+      pointer-events: none;
     }
     .birthday-scene h2 {
+      position: relative;
       margin: 0 0 12px;
-      color: #ffe0d2;
+      color: #fff0dc;
       font-size: clamp(28px, 8vw, 58px);
       letter-spacing: 0;
+      text-shadow: 0 0 28px rgba(255, 217, 143, 0.3);
     }
-    .birthday-scene p { margin: 0 auto; max-width: 560px; line-height: 1.8; color: #f9d8cc; }
+    .birthday-scene p {
+      position: relative;
+      margin: 0 auto;
+      max-width: 560px;
+      line-height: 1.8;
+      color: #f9d8cc;
+      font-size: clamp(15px, 2.6vw, 18px);
+    }
     .birthday-lights {
       display: flex;
       justify-content: center;
@@ -370,6 +698,38 @@
       background: var(--surface-2);
     }
     .album-detail p { line-height: 1.8; white-space: pre-wrap; }
+    @keyframes giftDropIn {
+      0% { opacity: 0; transform: translate3d(0, -78vh, 0) scale(0.42) rotate(-8deg); }
+      45% { opacity: 1; transform: translate3d(0, 16px, 0) scale(0.58) rotate(4deg); }
+      63% { transform: translate3d(0, -7px, 0) scale(0.55) rotate(-2deg); }
+      78% { transform: translate3d(0, 0, 0) scale(0.64) rotate(0deg); }
+      100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+    }
+    @keyframes giftShadowLand {
+      0% { opacity: 0; transform: translateX(-50%) scale(0.25); }
+      48% { opacity: 0.32; transform: translateX(-50%) scale(0.62); }
+      100% { opacity: 0.58; transform: translateX(-50%) scale(1); }
+    }
+    @keyframes giftSpotlight {
+      from { opacity: 0; transform: scale(0.72); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes giftSparkFloat {
+      0%, 100% { transform: translate3d(0, 0, 0) scale(0.8); opacity: 0.22; }
+      50% { transform: translate3d(8px, -18px, 0) scale(1.1); opacity: 0.72; }
+    }
+    @keyframes giftHandlePulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 217, 143, 0.44), 0 0 28px rgba(255, 217, 143, 0.42), 0 14px 28px rgba(33, 11, 13, 0.28); }
+      50% { box-shadow: 0 0 0 12px rgba(255, 217, 143, 0), 0 0 38px rgba(255, 217, 143, 0.72), 0 14px 28px rgba(33, 11, 13, 0.28); }
+    }
+    @keyframes giftGuideSweep {
+      0%, 100% { opacity: 0.2; transform: translateY(-50%) scaleX(0.32); }
+      50% { opacity: 0.88; transform: translateY(-50%) scaleX(1); }
+    }
+    @keyframes giftOpenLift {
+      0% { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(0, -4px, 0) scale(1.04); }
+    }
     @keyframes birthdayRise {
       from { opacity: 0; transform: translateY(18px) scale(0.98); }
       to { opacity: 1; transform: translateY(0) scale(1); }
@@ -387,6 +747,23 @@
       18% { opacity: 1; }
       74% { transform: scale(1.05); opacity: 0.84; }
       100% { transform: scale(1.28); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .gift-sparks span,
+      .birthday-lights span,
+      .fireworks span,
+      .birthday-gift-mask.is-ready .gift-pull,
+      .birthday-gift-mask.is-ready .gift-trail {
+        animation: none;
+      }
+      .gift-box-shell,
+      .gift-shadow,
+      .gift-stage::before {
+        animation-duration: 0.28s;
+      }
+      .birthday-mask {
+        animation-duration: 3.2s;
+      }
     }
 
     @media (max-width: 720px) {
@@ -527,6 +904,30 @@
     <button id="submitOrderBtn">提交点菜</button>
   </div>
   <div class="picked-panel hide" id="pickedPanel"></div>
+  <div class="birthday-gift-mask hide" id="birthdayGiftMask" tabindex="-1" aria-hidden="true">
+    <div class="gift-sparks" aria-hidden="true">
+      <span style="--x:18%;--y:22%;--s:5px;--c:#ffd98f;--d:0s;"></span>
+      <span style="--x:78%;--y:18%;--s:4px;--c:#f0a99a;--d:.35s;"></span>
+      <span style="--x:64%;--y:72%;--s:6px;--c:#fff1e6;--d:.7s;"></span>
+      <span style="--x:28%;--y:76%;--s:4px;--c:#bc786d;--d:1.05s;"></span>
+      <span style="--x:88%;--y:46%;--s:5px;--c:#ffd98f;--d:1.4s;"></span>
+      <span style="--x:12%;--y:52%;--s:4px;--c:#fff1e6;--d:1.75s;"></span>
+    </div>
+    <div class="gift-stage" id="giftStage">
+      <div class="gift-shadow" aria-hidden="true"></div>
+      <div class="gift-trail" aria-hidden="true"></div>
+      <div class="gift-box-shell" id="giftBoxShell">
+        <div class="gift-inside-light" aria-hidden="true"></div>
+        <div class="gift-lid" aria-hidden="true"></div>
+        <div class="gift-box">
+          <div class="gift-glow" aria-hidden="true"></div>
+          <div class="gift-ribbon gift-ribbon-vertical" aria-hidden="true"></div>
+          <div class="gift-ribbon gift-ribbon-horizontal" id="giftRibbon" aria-hidden="true"></div>
+          <button class="gift-pull" id="giftPullHandle" type="button" aria-label="打开生日礼物"></button>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="birthday-mask hide" id="birthdayMask">
     <div class="fireworks" aria-hidden="true">
       <span style="--x:18%;--y:24%;--c:#ffd7c5;--d:0s;"></span>
@@ -873,21 +1274,173 @@
       });
     }
 
-    function showBirthdayMoment() {
-      if (!isCelebrationMode() || !isXixiName(member)) return;
-      const msg = birthdayMessage();
-      birthdayInline.textContent = msg;
-      birthdayInline.classList.remove("hide");
-      const playedKey = `xixi-birthday-played-${todayKey()}`;
-      if (getStore(playedKey) === "1") return;
-      setStore(playedKey, "1");
+    let birthdayPlayedThisVisit = false;
+    let birthdayFinaleTimer = 0;
+
+    function playBirthdayFinale(msg) {
       document.getElementById("birthdayOverlayText").textContent = msg;
       const mask = document.getElementById("birthdayMask");
+      window.clearTimeout(birthdayFinaleTimer);
       mask.style.animation = "none";
       void mask.offsetHeight;
       mask.style.animation = "";
       mask.classList.remove("hide");
-      setTimeout(() => mask.classList.add("hide"), 5400);
+      birthdayFinaleTimer = window.setTimeout(() => mask.classList.add("hide"), 5400);
+    }
+
+    function resetGiftBox(giftBoxShell) {
+      if (!giftBoxShell) return;
+      giftBoxShell.style.setProperty("--pull", "0px");
+      giftBoxShell.style.setProperty("--ribbon-alpha", "1");
+      giftBoxShell.style.setProperty("--final-pull", "260px");
+    }
+
+    function startBirthdayGiftMoment(onDone) {
+      const giftMask = document.getElementById("birthdayGiftMask");
+      const giftBoxShell = document.getElementById("giftBoxShell");
+      if (!giftMask || !giftBoxShell) {
+        onDone();
+        return;
+      }
+
+      const prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let ready = false;
+      let completed = false;
+      let dragging = false;
+      let startX = 0;
+      let currentPull = 0;
+      let maxPull = 260;
+      let threshold = 170;
+      let readyTimer = 0;
+      let openTimer = 0;
+
+      function refreshPullLimits() {
+        const width = giftBoxShell.getBoundingClientRect().width || 286;
+        maxPull = Math.round(width * 0.82);
+        threshold = Math.round(width * 0.58);
+        giftBoxShell.style.setProperty("--final-pull", `${maxPull}px`);
+      }
+
+      function setPull(value) {
+        refreshPullLimits();
+        currentPull = Math.max(0, Math.min(maxPull, value));
+        const progress = currentPull / maxPull;
+        giftBoxShell.style.setProperty("--pull", `${currentPull}px`);
+        giftBoxShell.style.setProperty("--ribbon-alpha", `${Math.max(0.14, 1 - progress * 0.86).toFixed(2)}`);
+      }
+
+      function cleanup() {
+        window.clearTimeout(readyTimer);
+        window.clearTimeout(openTimer);
+        giftBoxShell.removeEventListener("pointerdown", onPointerDown);
+        giftBoxShell.removeEventListener("pointermove", onPointerMove);
+        giftBoxShell.removeEventListener("pointerup", onPointerEnd);
+        giftBoxShell.removeEventListener("pointercancel", onPointerEnd);
+        giftMask.removeEventListener("keydown", onKeyDown);
+        document.body.classList.remove("birthday-gift-active");
+      }
+
+      function finish() {
+        cleanup();
+        giftMask.classList.add("hide");
+        giftMask.classList.remove("is-ready", "is-dragging", "is-resetting", "is-opening");
+        giftMask.setAttribute("aria-hidden", "true");
+        resetGiftBox(giftBoxShell);
+        onDone();
+      }
+
+      function completeGiftOpen() {
+        if (completed) return;
+        completed = true;
+        ready = false;
+        dragging = false;
+        refreshPullLimits();
+        giftMask.classList.remove("is-ready", "is-dragging", "is-resetting");
+        giftMask.classList.add("is-opening");
+        giftBoxShell.style.setProperty("--pull", `${maxPull}px`);
+        giftBoxShell.style.setProperty("--ribbon-alpha", "0");
+        openTimer = window.setTimeout(finish, prefersReduced ? 620 : 1250);
+      }
+
+      function resetDrag() {
+        giftMask.classList.remove("is-dragging");
+        giftMask.classList.add("is-resetting");
+        setPull(0);
+        window.setTimeout(() => giftMask.classList.remove("is-resetting"), 380);
+      }
+
+      function onPointerDown(e) {
+        if (!ready || completed) return;
+        if (!e.target.closest(".gift-box, .gift-ribbon-horizontal, .gift-pull")) return;
+        e.preventDefault();
+        dragging = true;
+        giftMask.classList.add("is-dragging");
+        startX = e.clientX - currentPull;
+        if (giftBoxShell.setPointerCapture) giftBoxShell.setPointerCapture(e.pointerId);
+      }
+
+      function onPointerMove(e) {
+        if (!dragging || completed) return;
+        e.preventDefault();
+        setPull(e.clientX - startX);
+        if (currentPull >= threshold) completeGiftOpen();
+      }
+
+      function onPointerEnd(e) {
+        if (!dragging || completed) return;
+        dragging = false;
+        if (giftBoxShell.releasePointerCapture) {
+          try { giftBoxShell.releasePointerCapture(e.pointerId); } catch {}
+        }
+        if (currentPull >= threshold) {
+          completeGiftOpen();
+        } else {
+          resetDrag();
+        }
+      }
+
+      function onKeyDown(e) {
+        if (!ready || completed) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          completeGiftOpen();
+        }
+      }
+
+      giftMask.classList.add("hide");
+      giftMask.classList.remove("is-ready", "is-dragging", "is-resetting", "is-opening");
+      resetGiftBox(giftBoxShell);
+      void giftMask.offsetHeight;
+      giftMask.classList.remove("hide");
+      giftMask.setAttribute("aria-hidden", "false");
+      document.body.classList.add("birthday-gift-active");
+      giftBoxShell.style.animation = "none";
+      void giftBoxShell.offsetHeight;
+      giftBoxShell.style.animation = "";
+
+      giftBoxShell.addEventListener("pointerdown", onPointerDown);
+      giftBoxShell.addEventListener("pointermove", onPointerMove);
+      giftBoxShell.addEventListener("pointerup", onPointerEnd);
+      giftBoxShell.addEventListener("pointercancel", onPointerEnd);
+      giftMask.addEventListener("keydown", onKeyDown);
+
+      readyTimer = window.setTimeout(() => {
+        if (completed) return;
+        ready = true;
+        refreshPullLimits();
+        giftMask.classList.add("is-ready");
+        giftMask.focus({ preventScroll: true });
+      }, prefersReduced ? 320 : 1850);
+    }
+
+    function showBirthdayMoment() {
+      if (!isCelebrationMode()) return;
+      const msg = birthdayMessage();
+      birthdayInline.textContent = msg;
+      birthdayInline.classList.remove("hide");
+      if (birthdayPlayedThisVisit) return;
+      birthdayPlayedThisVisit = true;
+      startBirthdayGiftMoment(() => playBirthdayFinale(msg));
     }
 
     function syncAdminAccess() {
@@ -1240,7 +1793,7 @@
 
     function render() {
       applyRoleUI();
-      if (!isCelebrationMode() || !isXixiName(member)) {
+      if (!isCelebrationMode()) {
         birthdayInline.classList.add("hide");
         birthdayInline.textContent = "";
       }
