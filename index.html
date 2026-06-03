@@ -299,6 +299,34 @@
       animation: birthdayFade 5.2s ease forwards;
     }
     .birthday-mask.hide { display: none; }
+    .fireworks {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .fireworks span {
+      position: absolute;
+      left: var(--x);
+      top: var(--y);
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--c);
+      box-shadow:
+        0 -34px 0 var(--c),
+        24px -24px 0 var(--c),
+        34px 0 0 var(--c),
+        24px 24px 0 var(--c),
+        0 34px 0 var(--c),
+        -24px 24px 0 var(--c),
+        -34px 0 0 var(--c),
+        -24px -24px 0 var(--c);
+      opacity: 0;
+      animation: fireworkBurst 1.55s ease-out infinite;
+      animation-delay: var(--d);
+      filter: drop-shadow(0 0 10px var(--c));
+    }
     .birthday-scene {
       width: min(720px, 92vw);
       text-align: center;
@@ -354,6 +382,12 @@
       from { transform: translateY(0); opacity: 0.55; }
       to { transform: translateY(-7px); opacity: 1; }
     }
+    @keyframes fireworkBurst {
+      0% { transform: scale(0.15); opacity: 0; }
+      18% { opacity: 1; }
+      74% { transform: scale(1.05); opacity: 0.84; }
+      100% { transform: scale(1.28); opacity: 0; }
+    }
 
     @media (max-width: 720px) {
       .wrap { padding-left: 84px; }
@@ -388,7 +422,8 @@
         <span class="pill" id="syncTag">未连接云端</span>
         <button class="alt" id="adminEntryBtn">管理员入口</button>
         <button class="alt" id="shareBtn">复制成员链接</button>
-        <button class="alt" id="shareAdminBtn">复制管理员链接</button>
+        <button class="alt hide" id="shareAdminBtn">复制管理员链接</button>
+        <button class="alt hide" id="shareCelebrationBtn">复制生日链接</button>
         <button class="alt" id="pdfBtn">导出汇总 PDF</button>
       </div>
     </div>
@@ -403,13 +438,14 @@
       <div class="row"><input id="adminSecretInput" placeholder="管理员口令（自定义）" /></div>
       <div class="row"><button class="alt" id="saveAdminSecretBtn">保存管理员口令</button></div>
       <div class="row"><label><input type="checkbox" id="allowSubmitToggle" checked /> 允许成员提交点菜</label></div>
-      <h2 style="margin-top:18px;">生日模式</h2>
-      <div class="mode-toggle">
+      <h2 style="margin-top:18px;">生日专属页</h2>
+      <div class="mode-toggle hide">
         <label><input type="radio" name="appMode" value="normal" checked /> 一般模式</label>
         <label><input type="radio" name="appMode" value="celebration" /> 庆祝模式</label>
       </div>
       <div class="row"><textarea id="birthdayMessageInput" rows="3" placeholder="写给熙熙的生日文案"></textarea></div>
-      <div class="row"><button class="alt" id="saveCelebrationBtn">保存生日设置</button></div>
+      <div class="row"><button class="alt" id="saveCelebrationBtn">保存生日文案</button></div>
+      <div class="muted">生日动画和相册只会出现在“生日链接”里，普通成员链接始终保持正常点菜页面。</div>
       <div class="row"><button id="connectBtn">连接实时同步</button></div>
       <div id="connectStatus" class="muted">管理员填 Firebase 参数并连接。</div>
     </div>
@@ -458,19 +494,21 @@
         <div id="adminDishList" style="margin-top:10px;"></div>
       </details>
 
-      <details class="admin-collapse" open>
-        <summary>管理员：料理相册</summary>
-        <div class="row" style="margin-top:10px;"><input id="albumTitle" placeholder="这一顿饭的标题" /></div>
-        <div class="row"><input id="albumDate" type="date" /></div>
-        <div class="row"><textarea id="albumText" rows="3" placeholder="记录一点关于这顿饭的故事"></textarea></div>
-        <div class="row"><input id="albumImg" type="file" accept="image/*" /></div>
-        <div id="albumImgStatus" class="muted"></div>
-        <div class="row">
-          <button id="saveAlbumBtn">添加相册记录</button>
-          <button class="alt hide" id="cancelAlbumEditBtn">取消编辑</button>
-        </div>
-        <div id="adminAlbumList" class="album-admin-list"></div>
-      </details>
+    </div>
+
+    <div class="card hide" id="albumEditorPanel">
+      <h2>料理相册编辑</h2>
+      <div class="muted">生日专属页和管理员页都可以编辑这里；普通成员页只保留点菜功能。</div>
+      <div class="row" style="margin-top:10px;"><input id="albumTitle" placeholder="这一顿饭的标题" /></div>
+      <div class="row"><input id="albumDate" type="date" /></div>
+      <div class="row"><textarea id="albumText" rows="3" placeholder="记录一点关于这顿饭的故事"></textarea></div>
+      <div class="row"><input id="albumImg" type="file" accept="image/*" /></div>
+      <div id="albumImgStatus" class="muted"></div>
+      <div class="row">
+        <button id="saveAlbumBtn">添加相册记录</button>
+        <button class="alt hide" id="cancelAlbumEditBtn">取消编辑</button>
+      </div>
+      <div id="adminAlbumList" class="album-admin-list"></div>
     </div>
 
     <div class="card" id="dishCard">
@@ -490,6 +528,12 @@
   </div>
   <div class="picked-panel hide" id="pickedPanel"></div>
   <div class="birthday-mask hide" id="birthdayMask">
+    <div class="fireworks" aria-hidden="true">
+      <span style="--x:18%;--y:24%;--c:#ffd7c5;--d:0s;"></span>
+      <span style="--x:78%;--y:18%;--c:#f0a99a;--d:.25s;"></span>
+      <span style="--x:62%;--y:38%;--c:#ffe8bf;--d:.55s;"></span>
+      <span style="--x:30%;--y:48%;--c:#ffc5d2;--d:.85s;"></span>
+    </div>
     <div class="birthday-scene">
       <div class="birthday-lights"><span></span><span></span><span></span><span></span></div>
       <h2>生日快乐，熙熙</h2>
@@ -538,8 +582,10 @@
     const CELEBRATION_MODE = "celebration";
     const NORMAL_MODE = "normal";
     const adminModeRequested = params.get("admin") === "1";
+    const celebrationPageRequested = params.get("celebrate") === "1";
     const adminKeyFromUrl = params.get("key") || "";
     let isAdmin = false;
+    let isCelebrationPage = false;
 
     function makeId() { return `id-${Date.now()}-${Math.floor(Math.random() * 1e9)}`; }
     function buildDishImage(name) {
@@ -574,6 +620,7 @@
     const syncTag = document.getElementById("syncTag");
     const cloudPanel = document.getElementById("cloudPanel");
     const adminPanel = document.getElementById("adminPanel");
+    const albumEditorPanel = document.getElementById("albumEditorPanel");
     const memberCard = document.getElementById("memberCard");
     const searchCard = document.getElementById("searchCard");
     const dishCard = document.getElementById("dishCard");
@@ -588,12 +635,18 @@
     const albumGrid = document.getElementById("albumGrid");
     const birthdayInline = document.getElementById("birthdayInline");
 
+    function canEditAlbum() {
+      return isAdmin || isCelebrationPage;
+    }
+
     function applyRoleUI() {
       if (isAdmin) {
         roleTag.textContent = "管理员模式";
         adminPanel.classList.remove("hide");
+        albumEditorPanel.classList.remove("hide");
         cloudPanel.classList.remove("hide");
         document.getElementById("shareAdminBtn").classList.remove("hide");
+        document.getElementById("shareCelebrationBtn").classList.remove("hide");
         memberCard.classList.add("hide");
         searchCard.classList.add("hide");
         dishCard.classList.add("hide");
@@ -602,10 +655,12 @@
         celebrationPanel.classList.add("hide");
         albumPanel.classList.add("hide");
       } else {
-        roleTag.textContent = "成员模式";
+        roleTag.textContent = isCelebrationPage ? "生日专属页" : "成员模式";
         adminPanel.classList.add("hide");
         cloudPanel.classList.add("hide");
         document.getElementById("shareAdminBtn").classList.add("hide");
+        document.getElementById("shareCelebrationBtn").classList.add("hide");
+        albumEditorPanel.classList.toggle("hide", !canEditAlbum());
         memberCard.classList.remove("hide");
         searchCard.classList.remove("hide");
         dishCard.classList.remove("hide");
@@ -790,7 +845,7 @@
     }
 
     function isCelebrationMode() {
-      return roomState.settings && roomState.settings.mode === CELEBRATION_MODE;
+      return isCelebrationPage;
     }
 
     function birthdayMessage() {
@@ -837,11 +892,12 @@
 
     function syncAdminAccess() {
       isAdmin = adminModeRequested && isValidAdminSecret(adminKeyFromUrl);
+      isCelebrationPage = !isAdmin && celebrationPageRequested && isValidAdminSecret(adminKeyFromUrl);
       applyRoleUI();
     }
 
     function syncSettingsControls() {
-      const mode = isCelebrationMode() ? CELEBRATION_MODE : NORMAL_MODE;
+      const mode = roomState.settings && roomState.settings.mode === CELEBRATION_MODE ? CELEBRATION_MODE : NORMAL_MODE;
       document.querySelectorAll("input[name=appMode]").forEach((input) => {
         input.checked = input.value === mode;
       });
@@ -1084,7 +1140,7 @@
 
     function renderAdminAlbumList() {
       const box = document.getElementById("adminAlbumList");
-      if (!box || !isAdmin) return;
+      if (!box || !canEditAlbum()) return;
       const items = sortedAlbum();
       box.innerHTML = "";
       if (!items.length) {
@@ -1412,6 +1468,7 @@
       }
     });
     document.getElementById("saveAlbumBtn").onclick = async () => {
+      if (!canEditAlbum()) return alert("当前页面不能编辑相册，请使用管理员链接或生日专属链接");
       const title = document.getElementById("albumTitle").value.trim();
       const date = document.getElementById("albumDate").value;
       const text = document.getElementById("albumText").value.trim();
@@ -1518,6 +1575,12 @@
       const q = new URLSearchParams({ admin: "1", key: getCloudAdminSecret(), ...currentFirebaseParams() });
       await navigator.clipboard.writeText(`${base}?${q.toString()}`);
       alert("管理员链接已复制");
+    };
+    document.getElementById("shareCelebrationBtn").onclick = async () => {
+      const base = `${location.origin}${location.pathname}`;
+      const q = new URLSearchParams({ celebrate: "1", key: getCloudAdminSecret(), ...currentFirebaseParams() });
+      await navigator.clipboard.writeText(`${base}?${q.toString()}`);
+      alert("生日专属链接已复制");
     };
     document.getElementById("pdfBtn").onclick = () => {
       if (!isAdmin) return alert("仅管理员可导出");
