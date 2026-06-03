@@ -529,9 +529,10 @@
     const categories = ["肉类", "海鲜", "蔬菜", "主食", "点心"];
     const params = new URLSearchParams(location.search);
     const DEFAULT_ADMIN_SECRET = "icarus.cooker";
+    const LEGACY_ADMIN_SECRET = "chef-admin";
     const DEFAULT_BIRTHDAY_MESSAGE = "今天这份点菜软件，也是一张小小菜单：把想做给你的饭、想陪你过的日子，都慢慢收进来。生日快乐，熙熙。";
     const MAX_IMAGE_BYTES = 105 * 1024;
-    const FIRESTORE_SAFE_PAYLOAD_BYTES = 900 * 1024;
+    const FIRESTORE_WARN_PAYLOAD_BYTES = 980 * 1024;
     const DISH_IMAGE_STORAGE_FOLDER = "menu_rooms/main/dishes";
     const ALBUM_IMAGE_STORAGE_FOLDER = "menu_rooms/main/album";
     const CELEBRATION_MODE = "celebration";
@@ -545,6 +546,14 @@
       const safe = String(name || "").replace(/[<>&'\"]/g, "");
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f8efe1"/><stop offset="100%" stop-color="#e8d7bf"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="72" fill="#7c623d" font-family="serif">${safe}</text></svg>`;
       return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+
+    function protectImage(img, label) {
+      if (!img) return;
+      img.onerror = () => {
+        img.onerror = null;
+        img.src = buildDishImage(label || "料理");
+      };
     }
 
     const seed = [
@@ -708,7 +717,7 @@
     }
 
     async function migrateInlineImages({ save = true } = {}) {
-      if (!isAdmin || !storage) return;
+      if (!storage) return;
       const inline = inlineImageStats();
       const total = inline.dishes.length + inline.album.length;
       if (!total) return;
@@ -776,6 +785,10 @@
       return (roomState.settings && roomState.settings.adminSecret) || DEFAULT_ADMIN_SECRET;
     }
 
+    function isValidAdminSecret(secret) {
+      return secret === getCloudAdminSecret() || secret === DEFAULT_ADMIN_SECRET || secret === LEGACY_ADMIN_SECRET;
+    }
+
     function isCelebrationMode() {
       return roomState.settings && roomState.settings.mode === CELEBRATION_MODE;
     }
@@ -823,7 +836,7 @@
     }
 
     function syncAdminAccess() {
-      isAdmin = adminModeRequested && adminKeyFromUrl === getCloudAdminSecret();
+      isAdmin = adminModeRequested && isValidAdminSecret(adminKeyFromUrl);
       applyRoleUI();
     }
 
@@ -938,10 +951,8 @@
         if (migrated === false) return false;
       }
       const payloadBytes = statePayloadBytes(roomState);
-      if (payloadBytes > FIRESTORE_SAFE_PAYLOAD_BYTES) {
-        lastPushError = `保存内容约 ${formatBytes(payloadBytes)}，已接近 Firestore 单文档上限；请减少图片数量或换更小图片`;
-        console.warn(lastPushError);
-        return false;
+      if (payloadBytes > FIRESTORE_WARN_PAYLOAD_BYTES) {
+        console.warn(`保存内容约 ${formatBytes(payloadBytes)}，已接近 Firestore 单文档上限，仍将尝试写入`);
       }
       try {
         await setDoc(roomRef, { state: roomState, updatedAt: serverTimestamp() }, { merge: true });
@@ -991,15 +1002,29 @@
 
     async function togglePick(dishId, checked) {
       if (!ensureMember()) return;
+      const prev = !!roomState.orders[member].picks[dishId];
       roomState.orders[member].picks[dishId] = checked;
-      await pushState();
+      const ok = await pushState();
+      if (!ok) {
+        roomState.orders[member].picks[dishId] = prev;
+        render();
+        alert(`点菜保存失败：${pushFailureText()}`);
+        return;
+      }
       renderPickedPanel();
     }
 
     async function saveTempNote(dishId, value) {
       if (!ensureMember()) return;
+      const prev = roomState.orders[member].notes[dishId] || "";
       roomState.orders[member].notes[dishId] = value;
-      await pushState();
+      const ok = await pushState();
+      if (!ok) {
+        roomState.orders[member].notes[dishId] = prev;
+        render();
+        alert(`备注保存失败：${pushFailureText()}`);
+        return;
+      }
       renderPickedPanel();
     }
 
@@ -1023,6 +1048,7 @@
         el.querySelector("[data-edit]").onclick = async () => {
           openEditModal(d.id);
         };
+        protectImage(el.querySelector("img"), d.name);
         el.querySelector("[data-del]").onclick = async () => {
           if (!confirm(`确认删除 ${d.name} ?`)) return;
           roomState.dishes = roomState.dishes.filter((x) => x.id !== d.id);
@@ -1050,6 +1076,7 @@
         btn.className = "album-tile";
         const img = item.img || buildDishImage(item.title || "料理");
         btn.innerHTML = `<img src="${img}" alt="${item.title || "料理相册"}"><span class="album-caption"><strong>${item.title || "一顿饭"}</strong><span>${item.date || "没有日期"}</span></span>`;
+        protectImage(btn.querySelector("img"), item.title || "料理");
         btn.onclick = () => openAlbumDetail(item.id);
         albumGrid.appendChild(btn);
       });
@@ -1080,6 +1107,7 @@
             </div>
           </div>
         `;
+        protectImage(el.querySelector("img"), item.title || "料理");
         el.querySelector("[data-album-edit]").onclick = () => openAlbumEditor(item.id);
         el.querySelector("[data-album-del]").onclick = async () => {
           if (!confirm(`确认删除 ${item.title || "这条记录"} ?`)) return;
@@ -1098,6 +1126,7 @@
       if (!item) return;
       document.getElementById("albumDetailTitle").textContent = item.title || "一顿饭";
       document.getElementById("albumDetailImg").src = item.img || buildDishImage(item.title || "料理");
+      protectImage(document.getElementById("albumDetailImg"), item.title || "料理");
       document.getElementById("albumDetailDate").textContent = item.date || "";
       document.getElementById("albumDetailText").textContent = item.text || "";
       document.getElementById("albumDetailMask").classList.remove("hide");
@@ -1145,6 +1174,7 @@
       document.getElementById("editDishCat").value = d.cat;
       document.getElementById("editDishNote").value = d.note || "";
       document.getElementById("editDishPreview").src = d.img || buildDishImage(d.name);
+      protectImage(document.getElementById("editDishPreview"), d.name);
       const imgInput = document.getElementById("editDishImg");
       imgInput.value = "";
       imgInput.dataset.loading = "";
@@ -1176,6 +1206,7 @@
           const imgSrc = d.img || buildDishImage(d.name);
           el.className = "dish";
           el.innerHTML = `<img src="${imgSrc}" alt="${d.name}"><div class="row"><strong>${d.name}</strong></div>${d.note ? `<div class="muted">${d.note}</div>` : "<div class='muted'>暂无备注</div>"}<div class="row"><label><input type="checkbox" ${mine[d.id] ? "checked" : ""}/> 我想点这个</label></div><div class="row"><input placeholder="本次备注（可选）" value="${myNotes[d.id] || ""}" /></div>`;
+          protectImage(el.querySelector("img"), d.name);
           el.querySelector("input[type=checkbox]").onchange = (e) => togglePick(d.id, e.target.checked);
           el.querySelector("input[placeholder]").onchange = (e) => saveTempNote(d.id, e.target.value.trim());
           sec.appendChild(el);
@@ -1265,7 +1296,7 @@
     }
 
     document.getElementById("connectBtn").onclick = connectFirebase;
-    document.getElementById("saveMember").onclick = () => {
+    document.getElementById("saveMember").onclick = async () => {
       member = memberInput.value.trim();
       if (!member) {
         memberInput.focus();
@@ -1276,7 +1307,11 @@
       setStore("member-name", member);
       ensureMember(false);
       memberStatus.textContent = `当前昵称：${member}`;
-      pushState();
+      const ok = await pushState();
+      if (!ok) {
+        alert(`进入失败：${pushFailureText()}`);
+        return;
+      }
       render();
       showBirthdayMoment();
       alert(`已进入：${member}`);
@@ -1286,6 +1321,7 @@
       if (!roomRef) return alert("提交失败：实时连接未就绪");
       const latest = await getDoc(roomRef);
       if (latest.exists()) roomState = safeState(latest.data().state);
+      ensureMember(false);
       if (roomState.settings.allowSubmit === false) {
         alert("管理员已暂时关闭提交，请稍后再试");
         render();
@@ -1299,6 +1335,7 @@
       btn.textContent = oldText;
       if (ok) {
         alert("提交成功");
+        render();
       } else {
         alert(`提交失败：${pushFailureText()}`);
       }
@@ -1467,8 +1504,8 @@
     document.getElementById("adminEntryBtn").onclick = () => {
       const entered = prompt("请输入管理员口令");
       if (!entered) return;
-      const secret = getCloudAdminSecret();
-      if (entered !== secret) {
+      const secret = entered.trim();
+      if (!isValidAdminSecret(secret)) {
         alert("口令错误");
         return;
       }

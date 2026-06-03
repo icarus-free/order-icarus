@@ -60,7 +60,7 @@ service firebase.storage {
 ```
 
 ## 5. 使用
-1. 管理员打开 `index.html?admin=1&key=chef-admin`。
+1. 管理员打开 `index.html?admin=1&key=chef-admin` 或通过页面里的“管理员入口”输入口令进入。
 2. 在“云端配置（管理员）”填 Firebase 参数并点“连接实时同步”。
 3. 点“复制成员链接”发给朋友。
 4. 朋友点开即可点菜并提交；管理员页面实时显示同步结果。
