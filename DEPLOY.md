@@ -29,6 +29,27 @@ menu_rooms/main/album/{相册记录ID}.jpg
 
 Firestore 菜品和相册数据只保存图片下载 URL，避免单个菜单文档超过大小限制。按 100KB/张估算，15MB 大约可放 150 张图片，实际容量以 Firebase Storage 配额为准。
 
+如果浏览器控制台出现 `blocked by CORS policy`，说明 Storage bucket 没有允许当前网页域名上传。可以用 Google Cloud SDK 给 bucket 添加 CORS；本页面会在 Storage 暂不可用时自动把压缩后的图片保存到 Firestore，保证上传功能不被阻断。
+
+示例 `cors.json`：
+
+```json
+[
+  {
+    "origin": ["http://127.0.0.1:8765", "https://你的正式域名"],
+    "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "responseHeader": ["Content-Type", "Authorization", "x-goog-*"],
+    "maxAgeSeconds": 3600
+  }
+]
+```
+
+设置命令：
+
+```txt
+gcloud storage buckets update gs://你的-bucket-名 --cors-file=cors.json
+```
+
 ## 4. 安全规则（首版可用）
 Firestore Rules 里先用：
 

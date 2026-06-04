@@ -980,6 +980,8 @@
     const FIRESTORE_WARN_PAYLOAD_BYTES = 980 * 1024;
     const DISH_IMAGE_STORAGE_FOLDER = "menu_rooms/main/dishes";
     const ALBUM_IMAGE_STORAGE_FOLDER = "menu_rooms/main/album";
+    const STORAGE_RETRY_AFTER_KEY = "storage-retry-after";
+    const STORAGE_RETRY_DELAY_MS = 30 * 60 * 1000;
     const CELEBRATION_MODE = "celebration";
     const NORMAL_MODE = "normal";
     const adminModeRequested = params.get("admin") === "1";
@@ -1121,45 +1123,81 @@
       return String(value || "").startsWith("data:");
     }
 
+    function storageUploadPaused() {
+      const retryAfter = Number(getStore(STORAGE_RETRY_AFTER_KEY, "0"));
+      return Number.isFinite(retryAfter) && Date.now() < retryAfter;
+    }
+
+    function pauseStorageUploads() {
+      setStore(STORAGE_RETRY_AFTER_KEY, String(Date.now() + STORAGE_RETRY_DELAY_MS));
+    }
+
+    function storageWithTimeout(promise, label, ms = 5200) {
+      let timer = 0;
+      promise.catch(() => {});
+      return Promise.race([
+        promise.finally(() => window.clearTimeout(timer)),
+        new Promise((_, reject) => {
+          timer = window.setTimeout(() => reject(new Error(label)), ms);
+        })
+      ]);
+    }
+
     async function uploadDishImage(dishId, dataUrl) {
       if (!dataUrl) return "";
       if (!isDataUrl(dataUrl)) return dataUrl;
-      if (!storage) return dataUrl;
+      if (!storage || storageUploadPaused()) return dataUrl;
       const imgRef = storageRef(storage, dishImagePath(dishId));
-      await uploadString(imgRef, dataUrl, "data_url", {
-        contentType: "image/jpeg",
-        customMetadata: { source: "order-gizmo", compressed: "true" }
-      });
-      const url = await getDownloadURL(imgRef);
-      return `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+      try {
+        await storageWithTimeout(uploadString(imgRef, dataUrl, "data_url", {
+          contentType: "image/jpeg",
+          customMetadata: { source: "order-gizmo", compressed: "true" }
+        }), "Storage 上传超时");
+        const url = await storageWithTimeout(getDownloadURL(imgRef), "Storage 下载地址获取超时");
+        return `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+      } catch (e) {
+        pauseStorageUploads();
+        console.warn("Storage upload failed, keeping compressed image inline", e);
+        return dataUrl;
+      }
     }
 
     async function uploadAlbumImage(albumId, dataUrl) {
       if (!dataUrl) return "";
       if (!isDataUrl(dataUrl)) return dataUrl;
-      if (!storage) return dataUrl;
+      if (!storage || storageUploadPaused()) return dataUrl;
       const imgRef = storageRef(storage, albumImagePath(albumId));
-      await uploadString(imgRef, dataUrl, "data_url", {
-        contentType: "image/jpeg",
-        customMetadata: { source: "order-gizmo-album", compressed: "true" }
-      });
-      const url = await getDownloadURL(imgRef);
-      return `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+      try {
+        await storageWithTimeout(uploadString(imgRef, dataUrl, "data_url", {
+          contentType: "image/jpeg",
+          customMetadata: { source: "order-gizmo-album", compressed: "true" }
+        }), "Storage 上传超时");
+        const url = await storageWithTimeout(getDownloadURL(imgRef), "Storage 下载地址获取超时");
+        return `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+      } catch (e) {
+        pauseStorageUploads();
+        console.warn("Storage upload failed, keeping compressed album image inline", e);
+        return dataUrl;
+      }
+    }
+
+    function imageSaveStatusText(value, storageText) {
+      return isDataUrl(value) ? "Storage 暂不可用，图片已压缩保存" : storageText;
     }
 
     async function deleteDishImage(dishId) {
-      if (!storage || !dishId) return;
+      if (!storage || !dishId || storageUploadPaused()) return;
       try {
-        await deleteObject(storageRef(storage, dishImagePath(dishId)));
+        await storageWithTimeout(deleteObject(storageRef(storage, dishImagePath(dishId))), "Storage 删除超时", 3200);
       } catch (e) {
         console.warn("delete image skipped", e);
       }
     }
 
     async function deleteAlbumImage(albumId) {
-      if (!storage || !albumId) return;
+      if (!storage || !albumId || storageUploadPaused()) return;
       try {
-        await deleteObject(storageRef(storage, albumImagePath(albumId)));
+        await storageWithTimeout(deleteObject(storageRef(storage, albumImagePath(albumId))), "Storage 删除超时", 3200);
       } catch (e) {
         console.warn("delete album image skipped", e);
       }
@@ -1173,7 +1211,7 @@
     }
 
     async function migrateInlineImages({ save = true } = {}) {
-      if (!storage) return;
+      if (!storage || storageUploadPaused()) return;
       const inline = inlineImageStats();
       const total = inline.dishes.length + inline.album.length;
       if (!total) return;
@@ -1189,6 +1227,12 @@
         connectStatus.textContent = `旧图片迁移失败：${e && e.message ? e.message : "Storage 上传失败"}`;
         lastPushError = e && e.message ? e.message : "Storage 上传失败";
         return false;
+      }
+      const remainingInline = inlineImageStats();
+      const remaining = remainingInline.dishes.length + remainingInline.album.length;
+      if (remaining) {
+        connectStatus.textContent = "Storage 暂不可用，旧图片保留压缩保存";
+        return true;
       }
       if (!save) return true;
       const ok = await pushState();
@@ -1544,7 +1588,9 @@
       });
 
       syncTag.textContent = "实时中";
-      connectStatus.textContent = "已连接 Firebase 实时同步，图片将保存到 Storage 文件夹";
+      connectStatus.textContent = storageUploadPaused()
+        ? "已连接 Firebase 实时同步，Storage 暂不可用，图片将压缩保存"
+        : "已连接 Firebase 实时同步，图片将保存到 Storage 文件夹";
       syncSettingsControls();
       render();
     }
@@ -1768,6 +1814,7 @@
       input.dataset.base64 = "";
       input.dataset.loading = "";
       document.getElementById("albumImgStatus").textContent = "";
+      document.getElementById("saveAlbumBtn").disabled = false;
       document.getElementById("saveAlbumBtn").textContent = "添加相册记录";
       document.getElementById("cancelAlbumEditBtn").classList.add("hide");
     }
@@ -2040,7 +2087,7 @@
           btn.disabled = true;
           status.textContent = "图片上传中...";
           img = await uploadAlbumImage(albumId, img);
-          status.textContent = "图片已上传到相册文件夹";
+          status.textContent = imageSaveStatusText(img, "图片已上传到相册文件夹");
         } catch (err) {
           btn.disabled = false;
           const msg = err && err.message ? err.message : "图片上传失败";
@@ -2082,7 +2129,7 @@
           btn.disabled = true;
           status.textContent = "图片上传中...";
           img = await uploadDishImage(dishId, img);
-          status.textContent = "图片已上传到云端文件夹";
+          status.textContent = imageSaveStatusText(img, "图片已上传到云端文件夹");
         } catch (err) {
           btn.disabled = false;
           const msg = err && err.message ? err.message : "图片上传失败";
@@ -2199,7 +2246,7 @@
           btn.disabled = true;
           status.textContent = "图片上传中...";
           nextImg = await uploadDishImage(d.id, nextImg);
-          status.textContent = "图片已上传到云端文件夹";
+          status.textContent = imageSaveStatusText(nextImg, "图片已上传到云端文件夹");
         } catch (err) {
           btn.disabled = false;
           const msg = err && err.message ? err.message : "图片上传失败";
