@@ -27,7 +27,7 @@ menu_rooms/main/dishes/{菜品ID}.jpg
 menu_rooms/main/album/{相册记录ID}.jpg
 ```
 
-Firestore 菜品和相册数据只保存图片下载 URL，避免单个菜单文档超过大小限制。按 100KB/张估算，15MB 大约可放 150 张图片，实际容量以 Firebase Storage 配额为准。
+Firestore 菜品和相册数据只保存图片下载 URL 或图片文档引用，避免单个菜单文档超过大小限制。如果 Storage 因 CORS、规则或超时暂不可用，页面会把压缩图片保存到 Firestore 的 `menu_room_images` 集合里，再在菜单文档里保存引用，换设备也能读取。
 
 如果浏览器控制台出现 `blocked by CORS policy`，说明 Storage bucket 没有允许当前网页域名上传。可以用 Google Cloud SDK 给 bucket 添加 CORS；本页面会在 Storage 暂不可用时自动把压缩后的图片保存到 Firestore，保证上传功能不被阻断。
 
@@ -58,6 +58,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /menu_rooms/{docId} {
+      allow read, write: if true;
+    }
+    match /menu_room_images/{imageId} {
       allow read, write: if true;
     }
   }
