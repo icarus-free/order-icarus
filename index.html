@@ -810,7 +810,6 @@
       <div class="row"><input id="fbApiKey" placeholder="Firebase apiKey" /></div>
       <div class="row"><input id="fbAuthDomain" placeholder="Firebase authDomain" /></div>
       <div class="row"><input id="fbProjectId" placeholder="Firebase projectId" /></div>
-      <div class="row"><input id="fbStorageBucket" placeholder="Firebase storageBucket（用于菜品图片）" /></div>
       <div class="row"><input id="fbAppId" placeholder="Firebase appId" /></div>
       <div class="row"><input id="adminSecretInput" placeholder="管理员口令（自定义）" /></div>
       <div class="row"><button class="alt" id="saveAdminSecretBtn">保存管理员口令</button></div>
@@ -969,7 +968,6 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-    import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
     const categories = ["肉类", "海鲜", "蔬菜", "主食", "点心"];
     const params = new URLSearchParams(location.search);
@@ -978,12 +976,8 @@
     const DEFAULT_BIRTHDAY_MESSAGE = "今天这份点菜软件，也是一张小小菜单：把想做给你的饭、想陪你过的日子，都慢慢收进来。生日快乐，熙熙。";
     const MAX_IMAGE_BYTES = 105 * 1024;
     const FIRESTORE_WARN_PAYLOAD_BYTES = 980 * 1024;
-    const DISH_IMAGE_STORAGE_FOLDER = "menu_rooms/main/dishes";
-    const ALBUM_IMAGE_STORAGE_FOLDER = "menu_rooms/main/album";
     const FIRESTORE_IMAGE_COLLECTION = "menu_room_images";
     const FIRESTORE_IMAGE_REF_PREFIX = "firestore-image:";
-    const STORAGE_RETRY_AFTER_KEY = "storage-retry-after";
-    const STORAGE_RETRY_DELAY_MS = 30 * 60 * 1000;
     const CELEBRATION_MODE = "celebration";
     const NORMAL_MODE = "normal";
     const adminModeRequested = params.get("admin") === "1";
@@ -1113,14 +1107,6 @@
       return lastPushError || "请检查网络、实时连接状态，或换一张更小的图片后重试";
     }
 
-    function dishImagePath(dishId) {
-      return `${DISH_IMAGE_STORAGE_FOLDER}/${dishId}.jpg`;
-    }
-
-    function albumImagePath(albumId) {
-      return `${ALBUM_IMAGE_STORAGE_FOLDER}/${albumId}.jpg`;
-    }
-
     function isDataUrl(value) {
       return String(value || "").startsWith("data:");
     }
@@ -1151,26 +1137,6 @@
 
     function isFirestoreImageRef(value) {
       return !!parseFirestoreImageRef(value);
-    }
-
-    function storageUploadPaused() {
-      const retryAfter = Number(getStore(STORAGE_RETRY_AFTER_KEY, "0"));
-      return Number.isFinite(retryAfter) && Date.now() < retryAfter;
-    }
-
-    function pauseStorageUploads() {
-      setStore(STORAGE_RETRY_AFTER_KEY, String(Date.now() + STORAGE_RETRY_DELAY_MS));
-    }
-
-    function storageWithTimeout(promise, label, ms = 5200) {
-      let timer = 0;
-      promise.catch(() => {});
-      return Promise.race([
-        promise.finally(() => window.clearTimeout(timer)),
-        new Promise((_, reject) => {
-          timer = window.setTimeout(() => reject(new Error(label)), ms);
-        })
-      ]);
     }
 
     function firebaseWithTimeout(promise, label, ms = 12000) {
@@ -1256,67 +1222,25 @@
     async function uploadDishImage(dishId, dataUrl) {
       if (!dataUrl) return "";
       if (!isDataUrl(dataUrl)) return dataUrl;
-      if (!storage || storageUploadPaused()) return saveFirestoreImage("dish", dishId, dataUrl);
-      const imgRef = storageRef(storage, dishImagePath(dishId));
-      try {
-        await storageWithTimeout(uploadString(imgRef, dataUrl, "data_url", {
-          contentType: "image/jpeg",
-          customMetadata: { source: "order-gizmo", compressed: "true" }
-        }), "Storage 上传超时");
-        const url = await storageWithTimeout(getDownloadURL(imgRef), "Storage 下载地址获取超时");
-        await deleteFirestoreImage("dish", dishId);
-        return `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
-      } catch (e) {
-        pauseStorageUploads();
-        console.warn("Storage upload failed, storing image in Firestore image doc", e);
-        return saveFirestoreImage("dish", dishId, dataUrl);
-      }
+      return saveFirestoreImage("dish", dishId, dataUrl);
     }
 
     async function uploadAlbumImage(albumId, dataUrl) {
       if (!dataUrl) return "";
       if (!isDataUrl(dataUrl)) return dataUrl;
-      if (!storage || storageUploadPaused()) return saveFirestoreImage("album", albumId, dataUrl);
-      const imgRef = storageRef(storage, albumImagePath(albumId));
-      try {
-        await storageWithTimeout(uploadString(imgRef, dataUrl, "data_url", {
-          contentType: "image/jpeg",
-          customMetadata: { source: "order-gizmo-album", compressed: "true" }
-        }), "Storage 上传超时");
-        const url = await storageWithTimeout(getDownloadURL(imgRef), "Storage 下载地址获取超时");
-        await deleteFirestoreImage("album", albumId);
-        return `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
-      } catch (e) {
-        pauseStorageUploads();
-        console.warn("Storage upload failed, storing album image in Firestore image doc", e);
-        return saveFirestoreImage("album", albumId, dataUrl);
-      }
+      return saveFirestoreImage("album", albumId, dataUrl);
     }
 
-    function imageSaveStatusText(value, storageText) {
-      if (isFirestoreImageRef(value)) return "Storage 暂不可用，图片已保存到 Firestore 图片文档";
-      return isDataUrl(value) ? "图片仍是旧压缩数据，等待迁移到云端图片文档" : storageText;
+    function imageSaveStatusText(value, successText) {
+      if (isFirestoreImageRef(value)) return "图片已保存到 Firestore 图片文档";
+      return isDataUrl(value) ? "图片仍是旧压缩数据，等待迁移到云端图片文档" : successText;
     }
 
     async function deleteDishImage(dishId) {
-      if (storage && dishId && !storageUploadPaused()) {
-        try {
-          await storageWithTimeout(deleteObject(storageRef(storage, dishImagePath(dishId))), "Storage 删除超时", 3200);
-        } catch (e) {
-          console.warn("delete image skipped", e);
-        }
-      }
       await deleteFirestoreImage("dish", dishId);
     }
 
     async function deleteAlbumImage(albumId) {
-      if (storage && albumId && !storageUploadPaused()) {
-        try {
-          await storageWithTimeout(deleteObject(storageRef(storage, albumImagePath(albumId))), "Storage 删除超时", 3200);
-        } catch (e) {
-          console.warn("delete album image skipped", e);
-        }
-      }
       await deleteFirestoreImage("album", albumId);
     }
 
@@ -1365,7 +1289,6 @@
 
     let roomRef = null;
     let db = null;
-    let storage = null;
     let lastPushError = "";
     let inlineMigrationInProgress = false;
     const firestoreImageCache = new Map();
@@ -1628,21 +1551,18 @@
       apiKey: "AIzaSyAgd4dHKM0Kh3B7RyzBmP77swBOXNnQdGo",
       authDomain: "order-459ca.firebaseapp.com",
       projectId: "order-459ca",
-      storageBucket: "order-459ca.firebasestorage.app",
       appId: "1:36543886310:web:f8cbc1038e4c774ee79c27"
     };
     const cfg = {
       apiKey: params.get("apiKey") || getStore("fb-apiKey") || defaultCfg.apiKey,
       authDomain: params.get("authDomain") || getStore("fb-authDomain") || defaultCfg.authDomain,
       projectId: params.get("projectId") || getStore("fb-projectId") || defaultCfg.projectId,
-      storageBucket: params.get("storageBucket") || getStore("fb-storageBucket") || defaultCfg.storageBucket,
       appId: params.get("appId") || getStore("fb-appId") || defaultCfg.appId
     };
 
     document.getElementById("fbApiKey").value = cfg.apiKey;
     document.getElementById("fbAuthDomain").value = cfg.authDomain;
     document.getElementById("fbProjectId").value = cfg.projectId;
-    document.getElementById("fbStorageBucket").value = cfg.storageBucket;
     document.getElementById("fbAppId").value = cfg.appId;
 
     function currentFirebaseParams() {
@@ -1650,7 +1570,6 @@
         apiKey: document.getElementById("fbApiKey").value.trim() || cfg.apiKey,
         authDomain: document.getElementById("fbAuthDomain").value.trim() || cfg.authDomain,
         projectId: document.getElementById("fbProjectId").value.trim() || cfg.projectId,
-        storageBucket: document.getElementById("fbStorageBucket").value.trim() || cfg.storageBucket,
         appId: document.getElementById("fbAppId").value.trim() || cfg.appId
       };
     }
@@ -1682,21 +1601,18 @@
       const apiKey = document.getElementById("fbApiKey").value.trim();
       const authDomain = document.getElementById("fbAuthDomain").value.trim();
       const projectId = document.getElementById("fbProjectId").value.trim();
-      const storageBucket = document.getElementById("fbStorageBucket").value.trim() || `${projectId}.firebasestorage.app`;
       const appId = document.getElementById("fbAppId").value.trim();
-      if (!apiKey || !authDomain || !projectId || !storageBucket || !appId) return alert("请填写完整 Firebase 参数");
+      if (!apiKey || !authDomain || !projectId || !appId) return alert("请填写完整 Firebase 参数");
 
       setStore("fb-apiKey", apiKey);
       setStore("fb-authDomain", authDomain);
       setStore("fb-projectId", projectId);
-      setStore("fb-storageBucket", storageBucket);
       setStore("fb-appId", appId);
 
       try {
         connectStatus.textContent = "连接中...";
-        const app = initializeApp({ apiKey, authDomain, projectId, storageBucket, appId }, `app-${projectId}`);
+        const app = initializeApp({ apiKey, authDomain, projectId, appId }, `app-${projectId}`);
         db = getFirestore(app);
-        storage = getStorage(app);
         roomRef = doc(db, "menu_rooms", "main");
 
         const snap = await firebaseWithTimeout(getDoc(roomRef), "云端读取超时");
@@ -1717,16 +1633,13 @@
         });
 
         syncTag.textContent = "实时中";
-        connectStatus.textContent = storageUploadPaused()
-          ? "已连接 Firebase 实时同步；Storage 暂不可用时图片会保存到 Firestore 图片文档"
-          : "已连接 Firebase 实时同步，图片将优先保存到 Storage 文件夹";
+        connectStatus.textContent = "已连接 Firebase 实时同步，图片会保存到 Firestore 图片文档";
         syncSettingsControls();
         render();
       } catch (err) {
         lastPushError = err && err.message ? err.message : "实时连接失败";
         roomRef = null;
         db = null;
-        storage = null;
         syncTag.textContent = "本地模式";
         connectStatus.textContent = `实时连接失败：${lastPushError}。已先显示本地菜单，请稍后刷新重试。`;
         syncAdminAccess();
@@ -2445,7 +2358,7 @@
     applyRoleUI();
     syncSettingsControls();
     document.getElementById("albumDate").value = todayKey();
-    if (cfg.apiKey && cfg.authDomain && cfg.projectId && cfg.storageBucket && cfg.appId) {
+    if (cfg.apiKey && cfg.authDomain && cfg.projectId && cfg.appId) {
       syncTag.textContent = "连接中";
       if (!adminModeRequested && !celebrationPageRequested) render();
       connectFirebase();
